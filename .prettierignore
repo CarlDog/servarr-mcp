@@ -5,3 +5,7 @@ package-lock.json
 
 # Hand-crafted markdown — keep current formatting
 *.md
+
+# OpenAPI spec snapshots — committed verbatim from upstream so refresh diffs
+# against the source remain meaningful. Reformatting breaks the invariant.
+docs/specs/*.json
