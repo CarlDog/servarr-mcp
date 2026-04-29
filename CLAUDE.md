@@ -23,50 +23,59 @@ what's next.
 
 ## Layout
 
-- `src/index.ts` — MCP server entry. Computes which apps are enabled
-  from env vars at startup, then decides transport (stdio vs HTTP)
-  based on `MCP_PORT`. Per-session `McpServer` instances via the
-  `createServer()` factory; client instances are computed once at startup.
-- `src/base.ts` — `ServarrClient` base class with shared HTTP plumbing
-  (`X-Api-Key` auth, request helper, common endpoints: systemStatus,
-  queue, history). Also exports `asText()` helper.
-- `src/sonarr.ts`, `radarr.ts`, `lidarr.ts`, `readarr.ts`, `prowlarr.ts` —
-  one file per app: subclass of `ServarrClient` with app-specific
-  resource methods, plus a `register<App>Tools(server, client)` function
-  that registers MCP tools for that app.
+- `src/index.ts` — MCP server entry / composition root. Computes which
+  apps are enabled from env vars at startup, then decides transport
+  (stdio vs HTTP) based on `MCP_PORT`. Per-session `McpServer`
+  instances via the `createServer()` factory; client instances are
+  computed once at startup.
+- `src/clients/base.ts` — `ServarrClient` base class with shared HTTP
+  plumbing (`X-Api-Key` auth, request helper, common endpoints:
+  systemStatus, queue, history). Also exports the `asText()` helper.
+- `src/clients/<app>.ts` — one file per app, holding only the
+  `<App>Client` class (subclass of `ServarrClient` with app-specific
+  resource methods). Today: `sonarr.ts`, `radarr.ts`, `lidarr.ts`,
+  `readarr.ts`, `prowlarr.ts`.
+- `src/tools/<app>/index.ts` — MCP tool registrations for that app.
+  Each exports a `register<App>Tools(server, client)` function. Today
+  each app's `index.ts` holds all of that app's registrations directly.
+  As tool counts grow, pull resource groups into sibling files
+  (`series.ts`, `wanted.ts`, etc.) — see "Per-resource splitting"
+  below.
+- `docs/SERVARR-API.md` — cross-cutting Servarr API reference (auth,
+  paging, command pattern, errors).
+- `docs/<app>.md` — per-app endpoint catalogue + tool decisions
+  (current tools, candidate read/write tools, out-of-scope, gotchas).
+- `docs/specs/<app>.json` — version-pinned OpenAPI spec snapshots.
 - `Dockerfile` — multi-stage build (alpine, non-root)
 - `docker-compose.yml` — Compose/Portainer deployment using HTTP transport
-- `.githooks/pre-commit` — gitleaks scan
+- `.githooks/pre-commit` — gitleaks + PII pattern scan
 
-## When to add a `tools/` layer
+## Per-resource splitting
 
-Today each integration's API client and its MCP tool registrations live
-in the same file (`src/<app>.ts` holds both `<App>Client` and
-`register<App>Tools`). That's idiomatic when each tool is a thin
-wrapper over a single API call.
+Each `src/tools/<app>/index.ts` starts as a single file holding all
+of that app's tool registrations. Pull a resource group into its own
+sibling file (`src/tools/<app>/<resource>.ts`) when **either**:
 
-**Trigger to refactor:** the first tool that doesn't fit cleanly in any
-existing app file. Concretely:
+- That app's `index.ts` crosses ~150 lines.
+- A resource group has 3+ tools that are clearly a unit (e.g. all the
+  queue-related tools, all the wanted tools).
 
-- A tool that **orchestrates across multiple clients** — e.g. search
-  Prowlarr and add the result to Sonarr or Radarr depending on type,
-  or "promote a series upgrade" that touches Sonarr quality profiles
-  and Prowlarr indexer routing.
-- A tool that does **non-trivial composition** of multiple upstream
-  calls — cross-references, ranking, filtering beyond what any single
-  API exposes natively.
+The receiving sibling file exports a `register<Resource>Tools` that
+the app's `index.ts` calls. Use the per-app docs (`docs/<app>.md`) to
+inform the resource boundaries — those docs already group endpoints
+by resource family.
 
-When that moment arrives:
+## Cross-app tools
 
-1. Create `src/tools/<descriptive-name>.ts` for the cross-cutting tool.
-2. Pull existing per-app `register<App>Tools` functions into
-   `src/tools/<app>.ts` for symmetry. Each `src/<app>.ts` then holds
-   just the client class.
-3. Mechanical refactor, ~30 min for the current 5-app surface.
+When the first tool arrives that **orchestrates across multiple
+clients** (e.g. "search Prowlarr and add the result to Sonarr or
+Radarr depending on media type"), create `src/tools/cross/` and put
+the orchestration tool there. It takes whatever clients it needs as
+constructor parameters; the composition root in `src/index.ts` wires
+them.
 
-Don't pre-split before that trigger. Three similar lines is better than
-a premature abstraction — and the right split shape is easier to see
-once the first orchestration tool exists than before.
+Don't pre-create `src/tools/cross/` before the first orchestration
+tool exists.
 
 ## Transport modes
 

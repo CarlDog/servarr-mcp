@@ -4,11 +4,14 @@
 
 ## Phase
 
-API research complete — pre-build scaffolding for the larger tool
-surface. Deploy still live on the NAS at `http://your-nas:3002/mcp`
-with the existing 7 read tools per app working. Up next: refactor
-`src/` into `clients/` + `tools/<app>/<resource>/` to make room for
-the catalogued tool surface, then layer in tools per the per-app docs.
+Architecture scaffolding complete — `src/` now split into
+`clients/<app>.ts` (HTTP clients) + `tools/<app>/index.ts` (MCP
+registrations). API research catalogued ~1070 operations across the
+five apps in `docs/SERVARR-API.md` + per-app docs. Deploy still live
+on the NAS at `http://your-nas:3002/mcp` with the existing 7 read
+tools per app working — refactor was no-behaviour-change. Ready to
+layer in candidate read tools (per per-app doc tables), then write
+tools.
 
 ## Done
 
@@ -67,21 +70,34 @@ the catalogued tool surface, then layer in tools per the per-app docs.
   app-specific gotchas. Total: ~1100 lines of catalogued surface
   across ~1070 operations.
 
+## Done (architecture scaffolding)
+
+- **`src/` split into `clients/` + `tools/<app>/`.** Each `src/<app>.ts`
+  (which combined client class + tool registrations) became
+  `src/clients/<app>.ts` (class only) + `src/tools/<app>/index.ts`
+  (registrations only). `src/base.ts` → `src/clients/base.ts`.
+  Mechanical refactor, no behaviour change. typecheck + build + lint
+  + format:check all green against the new layout.
+- **CLAUDE.md updated** to reflect the new layout and to describe the
+  per-resource splitting trigger (split a `tools/<app>/` directory
+  into resource-named siblings when the index.ts crosses ~150 lines
+  or a resource group has 3+ tools).
+- **`.prettierignore`** excludes `docs/specs/*.json` so prettier
+  doesn't reformat upstream OpenAPI snapshots (which would corrupt
+  the refresh-diff invariant and break CI's format:check).
+
 ## Next
 
-1. **Refactor `src/` into `clients/` + `tools/<app>/<resource>/`** —
-   feature-folder layout informed by the per-app docs. Each
-   `register<App>Tools` becomes a fan-out across resource modules.
-   Mechanical, no behaviour change.
-2. **Wire up candidate read tools** (per per-app doc tables) — quick
-   wins like `wanted_missing`, `health`, `diskspace`, `list_quality_profiles`,
-   `list_root_folders`. These are prerequisites for any add-media write.
-3. **Wire into Claude Desktop** and verify tool calls flow through
+1. **Wire up candidate read tools** (per per-app doc tables) — quick
+   wins like `wanted_missing`, `health`, `diskspace`,
+   `list_quality_profiles`, `list_root_folders`. These are
+   prerequisites for any add-media write tool.
+2. **Wire into Claude Desktop** and verify tool calls flow through
    end-to-end from the assistant.
-4. **Layer in write tools** in the order the per-app docs indicate:
+3. **Layer in write tools** in the order the per-app docs indicate:
    start with command-trigger tools (low risk: search, refresh), then
    add-media, then queue manipulation, then release-grab.
-5. **Add tests** once a real Servarr test target is set up (don't mock).
+4. **Add tests** once a real Servarr test target is set up (don't mock).
 
 ## Open Decisions
 
