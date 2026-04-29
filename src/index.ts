@@ -5,11 +5,16 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { randomUUID } from "node:crypto";
 import express, { type Request, type Response } from "express";
-import { SonarrClient, registerSonarrTools } from "./sonarr.js";
-import { RadarrClient, registerRadarrTools } from "./radarr.js";
-import { LidarrClient, registerLidarrTools } from "./lidarr.js";
-import { ReadarrClient, registerReadarrTools } from "./readarr.js";
-import { ProwlarrClient, registerProwlarrTools } from "./prowlarr.js";
+import { SonarrClient } from "./clients/sonarr.js";
+import { RadarrClient } from "./clients/radarr.js";
+import { LidarrClient } from "./clients/lidarr.js";
+import { ReadarrClient } from "./clients/readarr.js";
+import { ProwlarrClient } from "./clients/prowlarr.js";
+import { registerSonarrTools } from "./tools/sonarr/index.js";
+import { registerRadarrTools } from "./tools/radarr/index.js";
+import { registerLidarrTools } from "./tools/lidarr/index.js";
+import { registerReadarrTools } from "./tools/readarr/index.js";
+import { registerProwlarrTools } from "./tools/prowlarr/index.js";
 
 interface AppRegistration {
   name: string;

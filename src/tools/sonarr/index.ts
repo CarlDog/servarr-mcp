@@ -1,35 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { ServarrClient, asText } from "./base.js";
-
-export class SonarrClient extends ServarrClient {
-  constructor(url: string, apiKey: string) {
-    super({ url, apiKey, apiPath: "/api/v3", appName: "Sonarr" });
-  }
-
-  async listSeries(): Promise<unknown> {
-    return this.request("/series");
-  }
-
-  async getSeries(id: number): Promise<unknown> {
-    return this.request(`/series/${id}`);
-  }
-
-  async lookupSeries(term: string): Promise<unknown> {
-    return this.request("/series/lookup", { term });
-  }
-
-  async listEpisodes(seriesId: number): Promise<unknown> {
-    return this.request("/episode", { seriesId });
-  }
-
-  async calendar(start?: string, end?: string): Promise<unknown> {
-    const params: Record<string, string> = {};
-    if (start) params.start = start;
-    if (end) params.end = end;
-    return this.request("/calendar", params);
-  }
-}
+import { asText } from "../../clients/base.js";
+import type { SonarrClient } from "../../clients/sonarr.js";
 
 export function registerSonarrTools(
   server: McpServer,
