@@ -1,13 +1,14 @@
 # Status
 
-**Last updated:** 2026-04-28
+**Last updated:** 2026-04-29
 
 ## Phase
 
-Deployed and verified — running on the NAS at
-`http://your-nas:3002/mcp` with all five Servarr apps configured
-(Sonarr/Radarr/Lidarr/Readarr/Prowlarr). End-to-end smoke test
-returned a real series list via `sonarr_list_series`.
+API research complete — pre-build scaffolding for the larger tool
+surface. Deploy still live on the NAS at `http://your-nas:3002/mcp`
+with the existing 7 read tools per app working. Up next: refactor
+`src/` into `clients/` + `tools/<app>/<resource>/` to make room for
+the catalogued tool surface, then layer in tools per the per-app docs.
 
 ## Done
 
@@ -44,13 +45,43 @@ returned a real series list via `sonarr_list_series`.
   `${HOST_PORT:-3002}:3000`, env passthrough for all `<APP>_*` vars,
   healthcheck via wget. Pulls `ghcr.io/carldog/servarr-mcp:latest`.
 
+## Done (API research)
+
+- **OpenAPI specs snapshotted** for all five apps in `docs/specs/*.json`,
+  pinned to the live deploy versions: Sonarr v4.0.17.2952, Radarr
+  v6.1.1.10360, Lidarr v3.1.0.4875, Readarr v0.4.18.2805, Prowlarr
+  v2.3.5.5327. `.gitattributes` locks them to LF so refreshes diff
+  cleanly. Live `/swagger/v3/swagger.json` is disabled in shipping
+  builds → spec source is the version-tagged GitHub repo.
+- **`docs/SERVARR-API.md`** — cross-cutting reference: identical
+  X-Api-Key/apikey security across all apps, the PagingResource shape,
+  the lookup pattern, the async `command` trigger pattern, the ~30
+  shared resources, the lack of any documented error schema, the
+  cross-cutting `DELETE /queue/{id}` flag set, and the
+  Swagger-disabled / container-DNS gotchas.
+- **Per-app catalogues** (`docs/sonarr.md`, `radarr.md`, `lidarr.md`,
+  `readarr.md`, `prowlarr.md`) — each documents the resource catalogue
+  grouped by capability, currently-exposed tools, candidate read tools,
+  candidate write tools (with risk class), out-of-scope items
+  (destructive / bulk / server lifecycle / config writes), and
+  app-specific gotchas. Total: ~1100 lines of catalogued surface
+  across ~1070 operations.
+
 ## Next
 
-- Wire into Claude Desktop and verify tool calls flow through end-to-end
-  from the assistant (rather than via curl).
-- Decide on adding write tools (add/remove series & movies, trigger
-  search, manage queue) — currently out of scope.
-- Add tests once a real Servarr test target is set up (don't mock).
+1. **Refactor `src/` into `clients/` + `tools/<app>/<resource>/`** —
+   feature-folder layout informed by the per-app docs. Each
+   `register<App>Tools` becomes a fan-out across resource modules.
+   Mechanical, no behaviour change.
+2. **Wire up candidate read tools** (per per-app doc tables) — quick
+   wins like `wanted_missing`, `health`, `diskspace`, `list_quality_profiles`,
+   `list_root_folders`. These are prerequisites for any add-media write.
+3. **Wire into Claude Desktop** and verify tool calls flow through
+   end-to-end from the assistant.
+4. **Layer in write tools** in the order the per-app docs indicate:
+   start with command-trigger tools (low risk: search, refresh), then
+   add-media, then queue manipulation, then release-grab.
+5. **Add tests** once a real Servarr test target is set up (don't mock).
 
 ## Open Decisions
 
