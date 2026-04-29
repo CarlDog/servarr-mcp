@@ -198,6 +198,23 @@ a valid `X-Api-Key`. Enabling it requires `<EnableSwagger>True</EnableSwagger>`
 in `config.xml` plus a restart. We don't do that — we read specs
 from the GitHub tag instead (see Spec snapshots above).
 
+### `DELETE /queue/{id}` flags are identical across the 4 media apps
+
+Sonarr, Radarr, Lidarr, and Readarr all expose the same four query
+flags on queue removal — verified identical across the spec snapshots:
+
+| Flag             | Default | Effect                                                 |
+| ---------------- | ------- | ------------------------------------------------------ |
+| `removeFromClient` | `true`  | Tells the download client to delete the download too. The default is destructive — the file leaves the client. |
+| `blocklist`      | `false` | Adds the release to the blocklist so it won't be re-grabbed. |
+| `skipRedownload` | `false` | Prevents the consuming app from re-searching for a replacement. |
+| `changeCategory` | `false` | Move the download to the "tv-recycle"/"movies-recycle" category in the client (if configured) instead of deleting. |
+
+Surface all four explicitly in any `<app>_queue_remove` tool — the
+defaults *are not* obviously safe (`removeFromClient=true` deletes
+the file). Prowlarr has no `/queue` endpoint at all (it's a search
+proxy, not a download manager — see [prowlarr.md](prowlarr.md)).
+
 ### Container DNS — host can't see its own hostname
 
 A container running servarr-mcp on the same host as Sonarr/Radarr/etc.
