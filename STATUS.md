@@ -4,8 +4,10 @@
 
 ## Phase
 
-Scaffolded — code builds, deps resolved, repo published, MCP tooling
-wired. Pending live smoke test against real Servarr instances.
+HTTP transport added (matching the plex-mcp pilot). Same image now
+supports stdio and Streamable HTTP, selected by the `MCP_PORT` env var.
+`docker-compose.yml` added for Portainer/Compose deployment. Pending
+live smoke test of HTTP path against real Servarr instances.
 
 ## Done
 
@@ -34,13 +36,24 @@ wired. Pending live smoke test against real Servarr instances.
   `task_completion`). `.serena/` committed.
 - OpenChronicle MCP server registered local-scope for this directory
   (`claude mcp add openchronicle -- oc mcp serve`).
+- **Dual transport:** stdio (default) + Streamable HTTP (when `MCP_PORT`
+  set). Per-session `McpServer` factory; `/mcp` endpoint with session-id
+  header; `/health` for docker healthcheck (reports enabled apps).
+  Express dependency added.
+- **Compose deploy:** `docker-compose.yml` with HTTP transport on port
+  `${HOST_PORT:-3002}:3000`, env passthrough for all `<APP>_*` vars,
+  healthcheck via wget. Pulls `ghcr.io/carldog/servarr-mcp:latest`.
 
 ## Next
 
-- Smoke-test against real Sonarr / Radarr / Prowlarr instances and
-  confirm at least one tool per app returns sensible JSON
-- Build the Docker image and verify `docker run -i` connects via stdio
-- Wire into Claude Desktop config and verify tool calls flow through
+- Smoke-test the HTTP transport: deploy via Portainer (Stack from Git
+  pointing at this repo) or `docker compose up` against real Servarr
+  instances. Hit `/mcp` with the MCP Inspector or curl, verify a tool
+  roundtrip per configured app.
+- Smoke-test stdio path still works post-refactor: `docker run -i --rm
+  -e SONARR_URL=... -e SONARR_API_KEY=... servarr-mcp`.
+- Wire into Claude Desktop config (HTTP via `"url": "http://nas:3002/mcp"`
+  or stdio via `docker run -i`) and verify tool calls flow through.
 
 ## Open Decisions
 

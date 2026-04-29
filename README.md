@@ -109,6 +109,33 @@ docker run -i --rm \
   ghcr.io/carldog/servarr-mcp:latest
 ```
 
+## Run with Docker Compose (HTTP, long-lived)
+
+The compose file runs the server in HTTP mode (Streamable HTTP) for
+long-lived deployment via Portainer or Compose. It pulls the published
+image from `ghcr.io/carldog/servarr-mcp:latest`.
+
+```bash
+# Set whichever app credentials apply:
+export SONARR_URL=http://192.168.1.50:8989; export SONARR_API_KEY=...
+export RADARR_URL=http://192.168.1.50:7878; export RADARR_API_KEY=...
+# ... (other apps as needed)
+export HOST_PORT=3002  # optional, defaults to 3002
+
+docker compose up
+```
+
+The MCP endpoint will be at `http://<host>:${HOST_PORT}/mcp`.
+
+## Deploy via Portainer (Stack from Git)
+
+1. In Portainer, *Stacks → Add Stack → Repository*.
+2. Repository URL: `https://github.com/CarlDog/servarr-mcp`
+3. Compose path: `docker-compose.yml`
+4. Environment variables: set whichever `<APP>_URL`/`<APP>_API_KEY`
+   pairs apply, plus optionally `HOST_PORT`.
+5. Deploy. Healthcheck reaches green within ~10 seconds.
+
 ## Use with Claude Desktop
 
 Add to your `claude_desktop_config.json`:

@@ -23,8 +23,10 @@ phase, what's done, and what's next.
 
 ## Layout
 
-- `src/index.ts` — MCP server entry. Iterates over the apps array and
-  registers each app whose `<APP>_URL` and `<APP>_API_KEY` env vars are set.
+- `src/index.ts` — MCP server entry. Computes which apps are enabled
+  from env vars at startup, then decides transport (stdio vs HTTP)
+  based on `MCP_PORT`. Per-session `McpServer` instances via the
+  `createServer()` factory; client instances are computed once at startup.
 - `src/base.ts` — `ServarrClient` base class with shared HTTP plumbing
   (`X-Api-Key` auth, request helper, common endpoints: systemStatus,
   queue, history). Also exports `asText()` helper.
@@ -33,6 +35,7 @@ phase, what's done, and what's next.
   resource methods, plus a `register<App>Tools(server, client)` function
   that registers MCP tools for that app.
 - `Dockerfile` — multi-stage build (alpine, non-root)
+- `docker-compose.yml` — Compose/Portainer deployment using HTTP transport
 - `.githooks/pre-commit` — gitleaks scan
 
 ## When to add a `tools/` layer
@@ -64,6 +67,26 @@ When that moment arrives:
 Don't pre-split before that trigger. Three similar lines is better than
 a premature abstraction — and the right split shape is easier to see
 once the first orchestration tool exists than before.
+
+## Transport modes
+
+The same image supports two transports, selected at start time:
+
+- **stdio (default)** — used when `MCP_PORT` is unset. Server reads
+  MCP wire from stdin and writes to stdout. Standard mode for
+  `docker run -i` invocation by an MCP client.
+- **HTTP (Streamable HTTP)** — used when `MCP_PORT` is set to a port
+  number. Server listens on `0.0.0.0:$MCP_PORT` with two endpoints:
+  - `POST/GET/DELETE /mcp` — MCP Streamable HTTP per spec; per-session
+    `mcp-session-id` header. Clients initialize via `POST /mcp` (no
+    session header) which mints a UUID; subsequent requests reuse it.
+  - `GET /health` — liveness probe (used by docker healthcheck).
+    Includes the list of enabled apps for visibility.
+
+  Per-session `McpServer` instances via the `createServer()` factory;
+  the enabled-apps list is computed once at startup from env vars.
+
+The two modes are mutually exclusive in a given process.
 
 ## API paths
 
