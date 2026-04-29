@@ -4,10 +4,10 @@
 
 ## Phase
 
-HTTP transport added (matching the plex-mcp pilot). Same image now
-supports stdio and Streamable HTTP, selected by the `MCP_PORT` env var.
-`docker-compose.yml` added for Portainer/Compose deployment. Pending
-live smoke test of HTTP path against real Servarr instances.
+Deployed and verified — running on the NAS at
+`http://your-nas:3002/mcp` with all five Servarr apps configured
+(Sonarr/Radarr/Lidarr/Readarr/Prowlarr). End-to-end smoke test
+returned a real series list via `sonarr_list_series`.
 
 ## Done
 
@@ -46,14 +46,11 @@ live smoke test of HTTP path against real Servarr instances.
 
 ## Next
 
-- Smoke-test the HTTP transport: deploy via Portainer (Stack from Git
-  pointing at this repo) or `docker compose up` against real Servarr
-  instances. Hit `/mcp` with the MCP Inspector or curl, verify a tool
-  roundtrip per configured app.
-- Smoke-test stdio path still works post-refactor: `docker run -i --rm
-  -e SONARR_URL=... -e SONARR_API_KEY=... servarr-mcp`.
-- Wire into Claude Desktop config (HTTP via `"url": "http://nas:3002/mcp"`
-  or stdio via `docker run -i`) and verify tool calls flow through.
+- Wire into Claude Desktop and verify tool calls flow through end-to-end
+  from the assistant (rather than via curl).
+- Decide on adding write tools (add/remove series & movies, trigger
+  search, manage queue) — currently out of scope.
+- Add tests once a real Servarr test target is set up (don't mock).
 
 ## Open Decisions
 
@@ -81,13 +78,10 @@ None active. Decisions made during scaffolding:
 
 ## Known Gaps
 
-- No tests yet
-- No CI yet
-- No published Docker image yet
-- API paths and endpoint shapes match my training-data knowledge but
-  haven't been smoke-tested against live instances. Most likely to
-  shift: query parameter names on calendar/history endpoints, response
-  shape for `/queue`. Verify on first connection.
+- No tests yet.
+- API paths and endpoint shapes were derived from training data and
+  smoke-tested only against the configured apps so far. Less-exercised
+  endpoints (calendar, history) may have surprises on first call.
 - Prowlarr's `/queue` endpoint may not exist (Prowlarr is a proxy, not
   a download manager). The base class includes a `queue()` method but
   Prowlarr's tool registration intentionally skips a `prowlarr_queue`
