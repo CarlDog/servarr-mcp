@@ -74,6 +74,18 @@ working-style note about mocked-vs-real divergence).
 
 ## MCP tooling (local workstation)
 
-(To be configured after first commit, mirroring the plex-mcp setup:
-Serena project activation + memory files, OpenChronicle local-scope
-registration via `claude mcp add openchronicle -- oc mcp serve`.)
+This repo is registered with two MCP servers for Claude Code sessions
+opened in this directory:
+
+- **Serena** — user-scoped (available in every project on this machine).
+  Project memories are written under the `servarr-mcp` Serena project.
+  Re-onboarding isn't needed; if memories drift, update them with
+  `mcp__serena__write_memory`.
+- **OpenChronicle** — registered at *local scope* for this directory
+  via `claude mcp add openchronicle -- oc mcp serve`. Effective for
+  future Claude Code sessions opened with cwd = repo root. Config lives
+  in `~/.claude.json` under the project entry — not committed.
+
+If you re-clone the repo on another machine, re-register OpenChronicle
+with the same command. Serena will work automatically if it's already
+user-scoped on that machine.

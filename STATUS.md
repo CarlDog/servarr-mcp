@@ -4,7 +4,8 @@
 
 ## Phase
 
-Scaffolding — initial repo structure created, build verification pending.
+Scaffolded — code builds, deps resolved, repo published, MCP tooling
+wired. Pending live smoke test against real Servarr instances.
 
 ## Done
 
@@ -22,15 +23,24 @@ Scaffolding — initial repo structure created, build verification pending.
 - Security baseline: `.gitignore`, `.gitleaks.toml`, `.githooks/pre-commit`
 - Project docs: CLAUDE.md, STATUS.md, README.md
 
+## Done (post-scaffold)
+
+- `npm install` + `tsc` clean. SDK and zod resolved cleanly; all 7 dist
+  outputs produced. 0 vulnerabilities.
+- Public repo published at https://github.com/CarlDog/servarr-mcp with
+  a no-PII commit author (CarlDog noreply).
+- Serena project activated; five memories written
+  (`project_overview`, `structure`, `suggested_commands`, `conventions`,
+  `task_completion`). `.serena/` committed.
+- OpenChronicle MCP server registered local-scope for this directory
+  (`claude mcp add openchronicle -- oc mcp serve`).
+
 ## Next
 
-- `npm install` and verify `npm run build` succeeds
 - Smoke-test against real Sonarr / Radarr / Prowlarr instances and
   confirm at least one tool per app returns sensible JSON
 - Build the Docker image and verify `docker run -i` connects via stdio
-- Commit + push to GitHub (under CarlDog, public, no-PII commit author)
-- Configure Serena project + onboarding memories (mirror plex-mcp setup)
-- Register OpenChronicle MCP locally for this directory
+- Wire into Claude Desktop config and verify tool calls flow through
 
 ## Open Decisions
 
