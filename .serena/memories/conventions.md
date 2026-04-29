@@ -10,7 +10,8 @@
 - Tool inputs: validated with `zod` schemas. Use `.describe(...)` on
   every field — descriptions surface to the LLM caller.
 - Tool outputs: a single text content block with JSON-stringified
-  payload. Use the `asText()` helper from `./base.js`.
+  payload. Use the `asText()` helper from `src/clients/base.ts`
+  (imported as `../../clients/base.js` from a `tools/<app>/` file).
 - Errors: thrown from app clients propagate; the MCP SDK wraps them.
   Don't swallow errors silently. Error messages include the app name
   for disambiguation (e.g. "Sonarr 401 Unauthorized for /series").
@@ -29,9 +30,14 @@
 - ESM only (`"type": "module"`). Imports use `.js` extension even when
   importing `.ts` files (NodeNext convention).
 - `strict: true` + `noUncheckedIndexedAccess: true`.
-- Each app client extends `ServarrClient`. Constructor takes `(url, apiKey)`
-  and calls `super({ url, apiKey, apiPath, appName })` with hardcoded
-  `apiPath` and `appName`.
+- Each app client extends `ServarrClient` (in `src/clients/base.ts`).
+  Constructor takes `(url, apiKey)` and calls `super({ url, apiKey,
+  apiPath, appName })` with hardcoded `apiPath` and `appName`. The
+  client class lives alone in `src/clients/<app>.ts` — never combine
+  it with tool registrations.
+- Tool registrations live in `src/tools/<app>/index.ts`. They import
+  the client as `import type { <App>Client } from "../../clients/<app>.js"`
+  (type-only import — the instance is passed in by the caller).
 - No `any`. Use `unknown` and let the LLM consume the JSON. Don't
   invest in deep response typing — the Servarr API surface is large
   and most fields are returned to the model verbatim.

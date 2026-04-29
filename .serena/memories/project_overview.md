@@ -15,8 +15,16 @@ Do not duplicate status here.
 - Servarr REST APIs accessed directly via `fetch` (no third-party clients)
 - Multi-stage Docker build (alpine base, non-root user `servarr`)
 
-**Transport:** stdio. MCP clients invoke `docker run -i --rm ...` and
-pipe stdin/stdout to the container as the MCP wire.
+**Transports (mutually exclusive per process):**
+- **stdio** (default — `MCP_PORT` unset). MCP clients invoke
+  `docker run -i --rm ...` and pipe stdin/stdout to the container.
+- **HTTP (Streamable HTTP)** when `MCP_PORT` is set. Server listens on
+  `:$MCP_PORT/mcp` (per-session via `mcp-session-id` header) plus
+  `/health` for healthchecks. Used by the `docker-compose.yml` /
+  Portainer deployment that runs at `http://carldog-nas:3002/mcp`.
+
+Per-session `McpServer` instances via `createServer()`; client
+instances are computed once at startup from env vars.
 
 **Auth pattern:** every Servarr app uses an `X-Api-Key` header. Each
 app is configured via two env vars: `<APP>_URL` and `<APP>_API_KEY`.
@@ -36,6 +44,14 @@ pattern) so personal email never lands in public commit metadata.
 Configure per-repo, not globally — verify with `git config user.email`
 before the first commit.
 
+**API research:** OpenAPI snapshots for all five apps live in
+`docs/specs/<app>.json`, pinned to the deployed versions. Live
+`/swagger/v3/swagger.json` is disabled in shipping builds (401), so
+specs come from each project's GitHub repo at the matching version
+tag. Cross-cutting reference: `docs/SERVARR-API.md`. Per-app
+endpoint catalogues + tool decisions: `docs/<app>.md`.
+
 **Sister project:** `plex-mcp` (https://github.com/CarlDog/plex-mcp)
 follows the same pattern for Plex Media Server. Conventions are
-deliberately identical.
+deliberately identical, including the docs/ research-first workflow
+(spec snapshots → cross-cutting doc → per-app catalogues → tools).

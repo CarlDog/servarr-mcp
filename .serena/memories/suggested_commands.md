@@ -12,7 +12,14 @@ npm run typecheck      # tsc --noEmit (fast feedback)
 npm run build          # tsc → dist/
 npm run dev            # tsx src/index.ts (needs at least one app's env vars)
 npm run start          # node dist/index.js
+npm run lint           # eslint . (CI runs this)
+npm run format:check   # prettier --check . (CI runs this)
+npm run format         # prettier --write .  (apply fixes)
 ```
+
+**`docs/specs/*.json` is excluded from prettier** via `.prettierignore`
+— those snapshots come from upstream verbatim and reformatting them
+would corrupt the refresh-diff invariant.
 
 ## Docker
 
