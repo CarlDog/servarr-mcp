@@ -35,6 +35,36 @@ phase, what's done, and what's next.
 - `Dockerfile` — multi-stage build (alpine, non-root)
 - `.githooks/pre-commit` — gitleaks scan
 
+## When to add a `tools/` layer
+
+Today each integration's API client and its MCP tool registrations live
+in the same file (`src/<app>.ts` holds both `<App>Client` and
+`register<App>Tools`). That's idiomatic when each tool is a thin
+wrapper over a single API call.
+
+**Trigger to refactor:** the first tool that doesn't fit cleanly in any
+existing app file. Concretely:
+
+- A tool that **orchestrates across multiple clients** — e.g. search
+  Prowlarr and add the result to Sonarr or Radarr depending on type,
+  or "promote a series upgrade" that touches Sonarr quality profiles
+  and Prowlarr indexer routing.
+- A tool that does **non-trivial composition** of multiple upstream
+  calls — cross-references, ranking, filtering beyond what any single
+  API exposes natively.
+
+When that moment arrives:
+
+1. Create `src/tools/<descriptive-name>.ts` for the cross-cutting tool.
+2. Pull existing per-app `register<App>Tools` functions into
+   `src/tools/<app>.ts` for symmetry. Each `src/<app>.ts` then holds
+   just the client class.
+3. Mechanical refactor, ~30 min for the current 5-app surface.
+
+Don't pre-split before that trigger. Three similar lines is better than
+a premature abstraction — and the right split shape is easier to see
+once the first orchestration tool exists than before.
+
 ## API paths
 
 Servarr-team apps split into two API versions:
