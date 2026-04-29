@@ -184,7 +184,8 @@ experience and the spec inspection so far:)
   Partial updates aren't supported — fetch the existing series with
   `GET /series/{id}`, mutate the field(s), PUT the whole thing back.
   Easy LLM trap: send a sparse object → 400.
-- **The queue `removeFromClient` flag on `DELETE /queue/{id}` is the
-  one that decides whether the file leaves the download client.**
-  Without it, Sonarr stops tracking the download but the client
-  continues. Surface it explicitly when wiring the queue-remove tool.
+- **Queue removal flags are cross-cutting.** See
+  [SERVARR-API.md § DELETE /queue/{id} flags](SERVARR-API.md#delete-queueid-flags-are-identical-across-the-4-media-apps) —
+  the four flags (`removeFromClient`, `blocklist`, `skipRedownload`,
+  `changeCategory`) and their defaults are identical across Sonarr,
+  Radarr, Lidarr, and Readarr.
