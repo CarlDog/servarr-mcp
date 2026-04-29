@@ -4,9 +4,11 @@ Before marking a code-touching task done:
 
 1. **Typecheck:** `npm run typecheck` (must be clean)
 2. **Build:** `npm run build` (must succeed; verifies `dist/*.js` outputs)
-3. **Tests:** none yet — when added, run them here
-4. **Lint:** none configured yet — skip
-5. **Manual verification (when relevant):**
+3. **Lint:** `npm run lint` (eslint, CI-enforced)
+4. **Format:** `npm run format:check` (prettier, CI-enforced; run
+   `npm run format` to auto-fix)
+5. **Tests:** none yet — when added, run them here
+6. **Manual verification (when relevant):**
    - For tool changes: run `npm run dev` against a real instance of the
      affected app and call the tool via an MCP client (Claude Desktop or
      `mcp inspector`). Verify the JSON response is sensible.
@@ -14,16 +16,20 @@ Before marking a code-touching task done:
      `docker run -i --rm -e <APP>_URL=... -e <APP>_API_KEY=... servarr-mcp`
      produces a clean stdio handshake with at least the `<APP>_*` tools
      registered.
-6. **Endpoint verification (first time touching a new endpoint):**
-   The API paths in this repo were derived from training data. The
-   first time a new endpoint is exercised, verify against the live
-   Servarr instance — query parameter names and response shapes
-   sometimes differ from documentation. Update STATUS.md "Known Gaps"
-   if a discrepancy is found and fixed.
-7. **STATUS.md:** update in the same commit as the work if the change
+7. **Endpoint verification (first time touching a new endpoint):**
+   Cross-reference against `docs/specs/<app>.json` (the version-pinned
+   OpenAPI snapshot) for query parameter names and response shapes.
+   If the live instance disagrees with the spec, that's a real
+   gotcha — record it in `docs/<app>.md` "gotchas" section and update
+   STATUS.md "Known Gaps."
+8. **Per-app docs:** if a new tool was added, move its row from the
+   "Candidate" table in `docs/<app>.md` to the "Currently exposed
+   tools" table in the same commit.
+9. **STATUS.md:** update in the same commit as the work if the change
    advances or alters project state. Don't batch status updates.
-8. **Commit:** the pre-commit hook runs gitleaks automatically. If it
-   fails, fix the underlying issue — never bypass with `--no-verify`.
+10. **Commit:** the pre-commit hook runs gitleaks + PII scan
+    automatically. If it fails, fix the underlying issue — never
+    bypass with `--no-verify`.
 
 ## Don't
 
