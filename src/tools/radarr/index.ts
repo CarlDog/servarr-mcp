@@ -98,4 +98,26 @@ export function registerRadarrTools(
     },
     async () => asText(await radarr.diskspace()),
   );
+
+  server.registerTool(
+    "radarr_list_quality_profiles",
+    {
+      title: "Radarr: List Quality Profiles",
+      description:
+        "List Radarr quality profiles. The `id` is required as `qualityProfileId` when adding a movie.",
+      inputSchema: {},
+    },
+    async () => asText(await radarr.qualityProfiles()),
+  );
+
+  server.registerTool(
+    "radarr_list_root_folders",
+    {
+      title: "Radarr: List Root Folders",
+      description:
+        "List Radarr root folders (where movies are stored on disk). The `path` is required as `rootFolderPath` when adding a movie.",
+      inputSchema: {},
+    },
+    async () => asText(await radarr.rootFolders()),
+  );
 }

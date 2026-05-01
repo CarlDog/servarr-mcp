@@ -43,6 +43,14 @@ export class ServarrClient {
     return this.request("/diskspace");
   }
 
+  async qualityProfiles(): Promise<unknown> {
+    return this.request("/qualityprofile");
+  }
+
+  async rootFolders(): Promise<unknown> {
+    return this.request("/rootfolder");
+  }
+
   async queue(): Promise<unknown> {
     return this.request("/queue");
   }

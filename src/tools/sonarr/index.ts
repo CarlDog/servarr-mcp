@@ -110,4 +110,26 @@ export function registerSonarrTools(
     },
     async () => asText(await sonarr.diskspace()),
   );
+
+  server.registerTool(
+    "sonarr_list_quality_profiles",
+    {
+      title: "Sonarr: List Quality Profiles",
+      description:
+        "List Sonarr quality profiles. The `id` is required as `qualityProfileId` when adding a series.",
+      inputSchema: {},
+    },
+    async () => asText(await sonarr.qualityProfiles()),
+  );
+
+  server.registerTool(
+    "sonarr_list_root_folders",
+    {
+      title: "Sonarr: List Root Folders",
+      description:
+        "List Sonarr root folders (where series are stored on disk). The `path` is required as `rootFolderPath` when adding a series.",
+      inputSchema: {},
+    },
+    async () => asText(await sonarr.rootFolders()),
+  );
 }

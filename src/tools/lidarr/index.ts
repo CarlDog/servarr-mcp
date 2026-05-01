@@ -102,4 +102,26 @@ export function registerLidarrTools(
     },
     async () => asText(await lidarr.diskspace()),
   );
+
+  server.registerTool(
+    "lidarr_list_quality_profiles",
+    {
+      title: "Lidarr: List Quality Profiles",
+      description:
+        "List Lidarr quality profiles. The `id` is required as `qualityProfileId` when adding an artist.",
+      inputSchema: {},
+    },
+    async () => asText(await lidarr.qualityProfiles()),
+  );
+
+  server.registerTool(
+    "lidarr_list_root_folders",
+    {
+      title: "Lidarr: List Root Folders",
+      description:
+        "List Lidarr root folders (where music is stored on disk). The `path` is required as `rootFolderPath` when adding an artist.",
+      inputSchema: {},
+    },
+    async () => asText(await lidarr.rootFolders()),
+  );
 }

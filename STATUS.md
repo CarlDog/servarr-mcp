@@ -4,15 +4,14 @@
 
 ## Phase
 
-Read-tool rollout in progress. Architecture scaffolding done; first
-candidate read tools landed for cross-app observability (`health` on
-all 5 apps, `diskspace` on 4 — Prowlarr lacks the endpoint).
-`src/` is split into `clients/<app>.ts` (HTTP clients) +
-`tools/<app>/index.ts` (MCP registrations). API research catalogued
-~1070 operations in `docs/SERVARR-API.md` + per-app docs. Deploy is
-live on the NAS at `http://your-nas:3002/mcp`. Next read-tool batch:
-add-media prerequisites (`list_quality_profiles`, `list_root_folders`),
-then `wanted_missing` / `wanted_cutoff`.
+Read-tool rollout in progress. Cross-app observability tools (`health`,
+`diskspace`) and add-media prerequisites (`list_quality_profiles`,
+`list_root_folders`) landed across the relevant apps. `src/` is split
+into `clients/<app>.ts` (HTTP clients) + `tools/<app>/index.ts` (MCP
+registrations). API research catalogued ~1070 operations in
+`docs/SERVARR-API.md` + per-app docs. Deploy is live on the NAS at
+`http://your-nas:3002/mcp`. Next read-tool batch:
+`wanted_missing` / `wanted_cutoff` for the four media apps.
 
 ## Done
 
@@ -98,25 +97,31 @@ then `wanted_missing` / `wanted_cutoff`.
 - Both endpoints are uniform across apps, so the methods live on
   `ServarrClient` base alongside `queue()` / `history()`. Per-app tool
   registrations are thin wrappers.
-- typecheck + build green.
+
+## Done (read tools — add-media prerequisites)
+
+- **`<app>_list_quality_profiles`** registered for Sonarr, Radarr,
+  Lidarr, Readarr — hits `GET /qualityprofile`. Output `id` is the
+  required `qualityProfileId` input for any future add-media tool.
+- **`<app>_list_root_folders`** registered for the same four apps —
+  hits `GET /rootfolder`. Output `path` is the required
+  `rootFolderPath` input for any future add-media tool.
+- Skipped for Prowlarr (no library / no add-media flow).
+- Endpoints are uniform across the four media apps, so the methods
+  also live on `ServarrClient` base.
 
 ## Next
 
-1. **Add-media prerequisites** — `<app>_list_quality_profiles`
-   (`GET /qualityprofile`) and `<app>_list_root_folders`
-   (`GET /rootfolder`) for Sonarr / Radarr / Lidarr / Readarr.
-   Required inputs for any future add-media write tool — landing
-   them as their own commit means writes later are pure additions.
-2. **`<app>_wanted_missing` / `<app>_wanted_cutoff`** for the four
+1. **`<app>_wanted_missing` / `<app>_wanted_cutoff`** for the four
    media apps. Different response shapes per app (episodes vs movies
    vs albums vs books), so each subclass gets its own typed method
    rather than going on the base.
-3. **Wire into Claude Desktop** and verify tool calls flow through
+2. **Wire into Claude Desktop** and verify tool calls flow through
    end-to-end from the assistant.
-4. **Layer in write tools** in the order the per-app docs indicate:
+3. **Layer in write tools** in the order the per-app docs indicate:
    start with command-trigger tools (low risk: search, refresh), then
    add-media, then queue manipulation, then release-grab.
-5. **Add tests** once a real Servarr test target is set up (don't mock).
+4. **Add tests** once a real Servarr test target is set up (don't mock).
 
 ## Open Decisions
 
