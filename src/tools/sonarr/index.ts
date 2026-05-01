@@ -106,7 +106,8 @@ export function registerSonarrTools(
     "sonarr_diskspace",
     {
       title: "Sonarr: Disk Space",
-      description: "Get per-mount disk space (free/total bytes) seen by Sonarr.",
+      description:
+        "Get per-mount disk space (free/total bytes) seen by Sonarr.",
       inputSchema: {},
     },
     async () => asText(await sonarr.diskspace()),

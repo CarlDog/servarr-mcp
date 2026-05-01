@@ -94,7 +94,8 @@ export function registerRadarrTools(
     "radarr_diskspace",
     {
       title: "Radarr: Disk Space",
-      description: "Get per-mount disk space (free/total bytes) seen by Radarr.",
+      description:
+        "Get per-mount disk space (free/total bytes) seen by Radarr.",
       inputSchema: {},
     },
     async () => asText(await radarr.diskspace()),
