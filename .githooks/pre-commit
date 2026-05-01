@@ -17,37 +17,56 @@ gitleaks protect --staged --redact --config .gitleaks.toml
 # can be committed publicly without itself containing any specific PII.
 echo "Running PII pattern check..."
 
+PERSONAL_EMAIL_RE='[A-Za-z0-9._%+-]+@(gmail|outlook|hotmail|yahoo|icloud|me|live|aol)\.[a-z]{2,}'
+
 PII_PATTERNS=(
   '[/\\]Users[/\\][A-Za-z0-9._-]+[/\\]'
   '[/\\]home[/\\][A-Za-z0-9._-]+[/\\]'
-  '[A-Za-z0-9._%+-]+@(gmail|outlook|hotmail|yahoo|icloud|me|live|aol)\.[a-z]{2,}'
+  "$PERSONAL_EMAIL_RE"
 )
 
 STAGED=$(git diff --cached --name-only --diff-filter=AM)
-if [ -z "$STAGED" ]; then
-  exit 0
+if [ -n "$STAGED" ]; then
+  FOUND=0
+  while IFS= read -r file; do
+    [ -z "$file" ] && continue
+    for pattern in "${PII_PATTERNS[@]}"; do
+      matches=$(git show ":$file" 2>/dev/null | grep -nE "$pattern" || true)
+      if [ -n "$matches" ]; then
+        if [ "$FOUND" -eq 0 ]; then
+          echo "" >&2
+          echo "PII patterns detected in staged content:" >&2
+          FOUND=1
+        fi
+        echo "  $file" >&2
+        printf '%s\n' "$matches" | head -3 | sed 's/^/    /' >&2
+      fi
+    done
+  done <<< "$STAGED"
+
+  if [ "$FOUND" -ne 0 ]; then
+    echo "" >&2
+    echo "Scrub the matches and re-stage. To adjust patterns, edit .githooks/pre-commit." >&2
+    exit 1
+  fi
 fi
 
-FOUND=0
-while IFS= read -r file; do
-  [ -z "$file" ] && continue
-  for pattern in "${PII_PATTERNS[@]}"; do
-    matches=$(git show ":$file" 2>/dev/null | grep -nE "$pattern" || true)
-    if [ -n "$matches" ]; then
-      if [ "$FOUND" -eq 0 ]; then
-        echo "" >&2
-        echo "PII patterns detected in staged content:" >&2
-        FOUND=1
-      fi
-      echo "  $file" >&2
-      printf '%s\n' "$matches" | head -3 | sed 's/^/    /' >&2
-    fi
-  done
-done <<< "$STAGED"
+# 3. Git author identity check
+# Catches personal-domain author emails that would otherwise land in
+# commit metadata even when staged file contents are clean. Uses the
+# same personal-email regex as the content scan.
+echo "Checking git author identity..."
 
-if [ "$FOUND" -ne 0 ]; then
+AUTHOR_IDENT=$(git var GIT_AUTHOR_IDENT)
+if printf '%s\n' "$AUTHOR_IDENT" | grep -qE "$PERSONAL_EMAIL_RE"; then
   echo "" >&2
-  echo "Scrub the matches and re-stage. To adjust patterns, edit .githooks/pre-commit." >&2
+  echo "ERROR: git author identity uses a personal email domain:" >&2
+  echo "  $AUTHOR_IDENT" >&2
+  echo "" >&2
+  echo "Set your GitHub noreply alias for this repo:" >&2
+  echo "  git config user.email '<numeric-id>+<login>@users.noreply.github.com'" >&2
+  echo "" >&2
+  echo "Find your numeric ID at https://api.github.com/users/<your-login> (look for \"id\")." >&2
   exit 1
 fi
 
