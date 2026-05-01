@@ -103,4 +103,26 @@ export function registerReadarrTools(
     },
     async () => asText(await readarr.diskspace()),
   );
+
+  server.registerTool(
+    "readarr_list_quality_profiles",
+    {
+      title: "Readarr: List Quality Profiles",
+      description:
+        "List Readarr quality profiles. The `id` is required as `qualityProfileId` when adding an author.",
+      inputSchema: {},
+    },
+    async () => asText(await readarr.qualityProfiles()),
+  );
+
+  server.registerTool(
+    "readarr_list_root_folders",
+    {
+      title: "Readarr: List Root Folders",
+      description:
+        "List Readarr root folders (where books are stored on disk). The `path` is required as `rootFolderPath` when adding an author.",
+      inputSchema: {},
+    },
+    async () => asText(await readarr.rootFolders()),
+  );
 }
