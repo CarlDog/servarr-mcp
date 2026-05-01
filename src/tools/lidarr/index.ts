@@ -98,7 +98,8 @@ export function registerLidarrTools(
     "lidarr_diskspace",
     {
       title: "Lidarr: Disk Space",
-      description: "Get per-mount disk space (free/total bytes) seen by Lidarr.",
+      description:
+        "Get per-mount disk space (free/total bytes) seen by Lidarr.",
       inputSchema: {},
     },
     async () => asText(await lidarr.diskspace()),
