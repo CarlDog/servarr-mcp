@@ -77,4 +77,25 @@ export function registerRadarrTools(
     },
     async ({ page_size }) => asText(await radarr.history(page_size)),
   );
+
+  server.registerTool(
+    "radarr_health",
+    {
+      title: "Radarr: Health",
+      description:
+        "Get aggregated Radarr health warnings (indexer down, low disk, etc.).",
+      inputSchema: {},
+    },
+    async () => asText(await radarr.health()),
+  );
+
+  server.registerTool(
+    "radarr_diskspace",
+    {
+      title: "Radarr: Disk Space",
+      description: "Get per-mount disk space (free/total bytes) seen by Radarr.",
+      inputSchema: {},
+    },
+    async () => asText(await radarr.diskspace()),
+  );
 }

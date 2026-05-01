@@ -81,4 +81,25 @@ export function registerLidarrTools(
     },
     async ({ page_size }) => asText(await lidarr.history(page_size)),
   );
+
+  server.registerTool(
+    "lidarr_health",
+    {
+      title: "Lidarr: Health",
+      description:
+        "Get aggregated Lidarr health warnings (indexer down, low disk, etc.).",
+      inputSchema: {},
+    },
+    async () => asText(await lidarr.health()),
+  );
+
+  server.registerTool(
+    "lidarr_diskspace",
+    {
+      title: "Lidarr: Disk Space",
+      description: "Get per-mount disk space (free/total bytes) seen by Lidarr.",
+      inputSchema: {},
+    },
+    async () => asText(await lidarr.diskspace()),
+  );
 }
