@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { asText } from "../../clients/base.js";
 import type { RadarrClient } from "../../clients/radarr.js";
+import { registerWantedTools } from "./wanted.js";
 
 export function registerRadarrTools(
   server: McpServer,
@@ -121,51 +122,5 @@ export function registerRadarrTools(
     async () => asText(await radarr.rootFolders()),
   );
 
-  server.registerTool(
-    "radarr_wanted_missing",
-    {
-      title: "Radarr: Wanted (Missing)",
-      description:
-        "List movies that are wanted but not yet downloaded. Filters to monitored items by default.",
-      inputSchema: {
-        page_size: z
-          .number()
-          .int()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe("Records to return (default 20)"),
-        monitored: z
-          .boolean()
-          .optional()
-          .describe("Only monitored items (default true)"),
-      },
-    },
-    async ({ page_size, monitored }) =>
-      asText(await radarr.wantedMissing(page_size, monitored)),
-  );
-
-  server.registerTool(
-    "radarr_wanted_cutoff",
-    {
-      title: "Radarr: Wanted (Below Cutoff)",
-      description:
-        "List movies downloaded below cutoff quality — upgrade candidates. Filters to monitored items by default.",
-      inputSchema: {
-        page_size: z
-          .number()
-          .int()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe("Records to return (default 20)"),
-        monitored: z
-          .boolean()
-          .optional()
-          .describe("Only monitored items (default true)"),
-      },
-    },
-    async ({ page_size, monitored }) =>
-      asText(await radarr.wantedCutoff(page_size, monitored)),
-  );
+  registerWantedTools(server, radarr);
 }
