@@ -7,13 +7,12 @@
 Read-tool rollout largely complete for v1: cross-app observability
 (`health`, `diskspace`), add-media prerequisites (`list_quality_profiles`,
 `list_root_folders`), and the wanted/missing + wanted/cutoff queries
-all shipped. `src/` is split into `clients/<app>.ts` (HTTP clients) +
-`tools/<app>/index.ts` (MCP registrations). API research catalogued
+all shipped. The `wanted` resource group is the first per-resource
+split — each media app's `tools/<app>/index.ts` now imports a sibling
+`wanted.ts` per the CLAUDE.md splitting rule. API research catalogued
 ~1070 operations in `docs/SERVARR-API.md` + per-app docs. Deploy is
-live on the NAS at `http://your-nas:3002/mcp`. Next: split the
-media-app `tools/<app>/index.ts` files (now 170–185 lines each) into
-resource-named siblings per the CLAUDE.md threshold rule, then wire
-into Claude Desktop, then start on write tools.
+live on the NAS at `http://your-nas:3002/mcp`. Next: wire into
+Claude Desktop, then start on write tools.
 
 ## Done
 
@@ -128,20 +127,26 @@ into Claude Desktop, then start on write tools.
   (`includeSeries`, `includeAuthor`, etc.) deliberately omitted from
   v1 — LLM can call `list_series`/etc. for parent metadata.
 
+## Done (refactor — wanted resource split)
+
+- Each media app's two `wanted_*` registrations moved out of
+  `tools/<app>/index.ts` into a sibling `tools/<app>/wanted.ts`
+  exporting `registerWantedTools(server, client)`. The app's
+  `index.ts` imports and calls it after its other registrations.
+- Brought line counts back under the CLAUDE.md ~150-line threshold:
+  Sonarr 138 (was 183), Radarr 126 (was 171), Lidarr 130 (was 175),
+  Readarr 131 (was 176). Each `wanted.ts` is ~57 lines.
+- Pure refactor — no behaviour change. Same tools, same shapes,
+  same handlers. typecheck + build green.
+
 ## Next
 
-1. **Split the media-app `tools/<app>/index.ts` files.** Sonarr (183),
-   Radarr (171), Lidarr (175), Readarr (176) all crossed the
-   ~150-line threshold once `wanted_missing` + `wanted_cutoff`
-   landed. Pull `wanted.ts` (and possibly `series.ts` / `movies.ts` /
-   `artists.ts` / `authors.ts`) into sibling files per the CLAUDE.md
-   per-resource splitting rule. Pure refactor, no behaviour change.
-2. **Wire into Claude Desktop** and verify tool calls flow through
+1. **Wire into Claude Desktop** and verify tool calls flow through
    end-to-end from the assistant.
-3. **Layer in write tools** in the order the per-app docs indicate:
+2. **Layer in write tools** in the order the per-app docs indicate:
    start with command-trigger tools (low risk: search, refresh), then
    add-media, then queue manipulation, then release-grab.
-4. **Add tests** once a real Servarr test target is set up (don't mock).
+3. **Add tests** once a real Servarr test target is set up (don't mock).
 
 ## Open Decisions
 
