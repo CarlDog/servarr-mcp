@@ -4,14 +4,16 @@
 
 ## Phase
 
-Read-tool rollout in progress. Cross-app observability tools (`health`,
-`diskspace`) and add-media prerequisites (`list_quality_profiles`,
-`list_root_folders`) landed across the relevant apps. `src/` is split
-into `clients/<app>.ts` (HTTP clients) + `tools/<app>/index.ts` (MCP
-registrations). API research catalogued ~1070 operations in
-`docs/SERVARR-API.md` + per-app docs. Deploy is live on the NAS at
-`http://carldog-nas:3002/mcp`. Next read-tool batch:
-`wanted_missing` / `wanted_cutoff` for the four media apps.
+Read-tool rollout largely complete for v1: cross-app observability
+(`health`, `diskspace`), add-media prerequisites (`list_quality_profiles`,
+`list_root_folders`), and the wanted/missing + wanted/cutoff queries
+all shipped. `src/` is split into `clients/<app>.ts` (HTTP clients) +
+`tools/<app>/index.ts` (MCP registrations). API research catalogued
+~1070 operations in `docs/SERVARR-API.md` + per-app docs. Deploy is
+live on the NAS at `http://carldog-nas:3002/mcp`. Next: split the
+media-app `tools/<app>/index.ts` files (now 170–185 lines each) into
+resource-named siblings per the CLAUDE.md threshold rule, then wire
+into Claude Desktop, then start on write tools.
 
 ## Done
 
@@ -110,12 +112,30 @@ registrations). API research catalogued ~1070 operations in
 - Endpoints are uniform across the four media apps, so the methods
   also live on `ServarrClient` base.
 
+## Done (read tools — wanted)
+
+- **`<app>_wanted_missing`** registered for Sonarr, Radarr, Lidarr,
+  Readarr — hits `GET /wanted/missing`. Lists items that should be
+  downloaded but aren't yet (episodes / movies / albums / books).
+  Inputs: `page_size` (default 20), `monitored` (default true).
+- **`<app>_wanted_cutoff`** for the same four apps — hits
+  `GET /wanted/cutoff`. Lists items downloaded below cutoff quality
+  (upgrade candidates).
+- Skipped Prowlarr (no library, no wanted concept).
+- Endpoints + paging params are uniform across the four apps so the
+  methods live on `ServarrClient` base. Per-app sort defaults left to
+  each Servarr API; no `sortKey` passed through. Include-* flags
+  (`includeSeries`, `includeAuthor`, etc.) deliberately omitted from
+  v1 — LLM can call `list_series`/etc. for parent metadata.
+
 ## Next
 
-1. **`<app>_wanted_missing` / `<app>_wanted_cutoff`** for the four
-   media apps. Different response shapes per app (episodes vs movies
-   vs albums vs books), so each subclass gets its own typed method
-   rather than going on the base.
+1. **Split the media-app `tools/<app>/index.ts` files.** Sonarr (183),
+   Radarr (171), Lidarr (175), Readarr (176) all crossed the
+   ~150-line threshold once `wanted_missing` + `wanted_cutoff`
+   landed. Pull `wanted.ts` (and possibly `series.ts` / `movies.ts` /
+   `artists.ts` / `authors.ts`) into sibling files per the CLAUDE.md
+   per-resource splitting rule. Pure refactor, no behaviour change.
 2. **Wire into Claude Desktop** and verify tool calls flow through
    end-to-end from the assistant.
 3. **Layer in write tools** in the order the per-app docs indicate:

@@ -62,6 +62,14 @@ export class ServarrClient {
       sortDirection: "descending",
     });
   }
+
+  async wantedMissing(pageSize = 20, monitored = true): Promise<unknown> {
+    return this.request("/wanted/missing", { pageSize, monitored });
+  }
+
+  async wantedCutoff(pageSize = 20, monitored = true): Promise<unknown> {
+    return this.request("/wanted/cutoff", { pageSize, monitored });
+  }
 }
 
 export const asText = (data: unknown) => ({
