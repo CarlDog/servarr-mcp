@@ -132,4 +132,52 @@ export function registerSonarrTools(
     },
     async () => asText(await sonarr.rootFolders()),
   );
+
+  server.registerTool(
+    "sonarr_wanted_missing",
+    {
+      title: "Sonarr: Wanted (Missing)",
+      description:
+        "List episodes that are wanted but not yet downloaded. Filters to monitored items by default.",
+      inputSchema: {
+        page_size: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe("Records to return (default 20)"),
+        monitored: z
+          .boolean()
+          .optional()
+          .describe("Only monitored items (default true)"),
+      },
+    },
+    async ({ page_size, monitored }) =>
+      asText(await sonarr.wantedMissing(page_size, monitored)),
+  );
+
+  server.registerTool(
+    "sonarr_wanted_cutoff",
+    {
+      title: "Sonarr: Wanted (Below Cutoff)",
+      description:
+        "List episodes downloaded below cutoff quality — upgrade candidates. Filters to monitored items by default.",
+      inputSchema: {
+        page_size: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe("Records to return (default 20)"),
+        monitored: z
+          .boolean()
+          .optional()
+          .describe("Only monitored items (default true)"),
+      },
+    },
+    async ({ page_size, monitored }) =>
+      asText(await sonarr.wantedCutoff(page_size, monitored)),
+  );
 }
