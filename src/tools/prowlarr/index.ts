@@ -65,4 +65,15 @@ export function registerProwlarrTools(
     },
     async ({ page_size }) => asText(await prowlarr.history(page_size)),
   );
+
+  server.registerTool(
+    "prowlarr_health",
+    {
+      title: "Prowlarr: Health",
+      description:
+        "Get aggregated Prowlarr health warnings (indexer down, proxy unreachable, etc.).",
+      inputSchema: {},
+    },
+    async () => asText(await prowlarr.health()),
+  );
 }

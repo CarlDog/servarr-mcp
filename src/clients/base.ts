@@ -35,6 +35,14 @@ export class ServarrClient {
     return this.request("/system/status");
   }
 
+  async health(): Promise<unknown> {
+    return this.request("/health");
+  }
+
+  async diskspace(): Promise<unknown> {
+    return this.request("/diskspace");
+  }
+
   async queue(): Promise<unknown> {
     return this.request("/queue");
   }

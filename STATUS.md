@@ -1,17 +1,18 @@
 # Status
 
-**Last updated:** 2026-04-29
+**Last updated:** 2026-05-01
 
 ## Phase
 
-Architecture scaffolding complete — `src/` now split into
-`clients/<app>.ts` (HTTP clients) + `tools/<app>/index.ts` (MCP
-registrations). API research catalogued ~1070 operations across the
-five apps in `docs/SERVARR-API.md` + per-app docs. Deploy still live
-on the NAS at `http://your-nas:3002/mcp` with the existing 7 read
-tools per app working — refactor was no-behaviour-change. Ready to
-layer in candidate read tools (per per-app doc tables), then write
-tools.
+Read-tool rollout in progress. Architecture scaffolding done; first
+candidate read tools landed for cross-app observability (`health` on
+all 5 apps, `diskspace` on 4 — Prowlarr lacks the endpoint).
+`src/` is split into `clients/<app>.ts` (HTTP clients) +
+`tools/<app>/index.ts` (MCP registrations). API research catalogued
+~1070 operations in `docs/SERVARR-API.md` + per-app docs. Deploy is
+live on the NAS at `http://your-nas:3002/mcp`. Next read-tool batch:
+add-media prerequisites (`list_quality_profiles`, `list_root_folders`),
+then `wanted_missing` / `wanted_cutoff`.
 
 ## Done
 
@@ -86,18 +87,36 @@ tools.
   doesn't reformat upstream OpenAPI snapshots (which would corrupt
   the refresh-diff invariant and break CI's format:check).
 
+## Done (read tools — observability)
+
+- **`<app>_health`** registered for Sonarr, Radarr, Lidarr, Readarr,
+  Prowlarr — hits `GET /health`. Surfaces indexer-down, low-disk,
+  proxy-unreachable warnings.
+- **`<app>_diskspace`** registered for Sonarr, Radarr, Lidarr, Readarr
+  — hits `GET /diskspace`. Skipped Prowlarr (no `/diskspace` endpoint
+  per spec; Prowlarr is a proxy, not a download manager).
+- Both endpoints are uniform across apps, so the methods live on
+  `ServarrClient` base alongside `queue()` / `history()`. Per-app tool
+  registrations are thin wrappers.
+- typecheck + build green.
+
 ## Next
 
-1. **Wire up candidate read tools** (per per-app doc tables) — quick
-   wins like `wanted_missing`, `health`, `diskspace`,
-   `list_quality_profiles`, `list_root_folders`. These are
-   prerequisites for any add-media write tool.
-2. **Wire into Claude Desktop** and verify tool calls flow through
+1. **Add-media prerequisites** — `<app>_list_quality_profiles`
+   (`GET /qualityprofile`) and `<app>_list_root_folders`
+   (`GET /rootfolder`) for Sonarr / Radarr / Lidarr / Readarr.
+   Required inputs for any future add-media write tool — landing
+   them as their own commit means writes later are pure additions.
+2. **`<app>_wanted_missing` / `<app>_wanted_cutoff`** for the four
+   media apps. Different response shapes per app (episodes vs movies
+   vs albums vs books), so each subclass gets its own typed method
+   rather than going on the base.
+3. **Wire into Claude Desktop** and verify tool calls flow through
    end-to-end from the assistant.
-3. **Layer in write tools** in the order the per-app docs indicate:
+4. **Layer in write tools** in the order the per-app docs indicate:
    start with command-trigger tools (low risk: search, refresh), then
    add-media, then queue manipulation, then release-grab.
-4. **Add tests** once a real Servarr test target is set up (don't mock).
+5. **Add tests** once a real Servarr test target is set up (don't mock).
 
 ## Open Decisions
 

@@ -89,4 +89,25 @@ export function registerSonarrTools(
     },
     async ({ page_size }) => asText(await sonarr.history(page_size)),
   );
+
+  server.registerTool(
+    "sonarr_health",
+    {
+      title: "Sonarr: Health",
+      description:
+        "Get aggregated Sonarr health warnings (indexer down, low disk, etc.).",
+      inputSchema: {},
+    },
+    async () => asText(await sonarr.health()),
+  );
+
+  server.registerTool(
+    "sonarr_diskspace",
+    {
+      title: "Sonarr: Disk Space",
+      description: "Get per-mount disk space (free/total bytes) seen by Sonarr.",
+      inputSchema: {},
+    },
+    async () => asText(await sonarr.diskspace()),
+  );
 }

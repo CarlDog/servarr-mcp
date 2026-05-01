@@ -81,4 +81,26 @@ export function registerReadarrTools(
     },
     async ({ page_size }) => asText(await readarr.history(page_size)),
   );
+
+  server.registerTool(
+    "readarr_health",
+    {
+      title: "Readarr: Health",
+      description:
+        "Get aggregated Readarr health warnings (indexer down, low disk, etc.).",
+      inputSchema: {},
+    },
+    async () => asText(await readarr.health()),
+  );
+
+  server.registerTool(
+    "readarr_diskspace",
+    {
+      title: "Readarr: Disk Space",
+      description:
+        "Get per-mount disk space (free/total bytes) seen by Readarr.",
+      inputSchema: {},
+    },
+    async () => asText(await readarr.diskspace()),
+  );
 }
