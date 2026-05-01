@@ -4,15 +4,17 @@
 
 ## Phase
 
-Read-tool rollout largely complete for v1: cross-app observability
+v1 read tools shipped and live in production. Cross-app observability
 (`health`, `diskspace`), add-media prerequisites (`list_quality_profiles`,
-`list_root_folders`), and the wanted/missing + wanted/cutoff queries
-all shipped. The `wanted` resource group is the first per-resource
-split — each media app's `tools/<app>/index.ts` now imports a sibling
-`wanted.ts` per the CLAUDE.md splitting rule. API research catalogued
-~1070 operations in `docs/SERVARR-API.md` + per-app docs. Deploy is
-live on the NAS at `http://carldog-nas:3002/mcp`. Next: wire into
-Claude Desktop, then start on write tools.
+`list_root_folders`), and wanted/missing + wanted/cutoff all deployed.
+54 tools advertised on the live server (29 pre-existing + 25 new).
+The `wanted` resource group is the first per-resource split — each
+media app's `tools/<app>/index.ts` now imports a sibling `wanted.ts`
+per the CLAUDE.md splitting rule. API research catalogued ~1070
+operations in `docs/SERVARR-API.md` + per-app docs. Deploy live on
+the NAS at `http://carldog-nas:3002/mcp`, git-managed Portainer
+stack id 148, image `ghcr.io/carldog/servarr-mcp:latest`. Next:
+write tools, starting with command-trigger.
 
 ## Done
 
@@ -139,14 +141,34 @@ Claude Desktop, then start on write tools.
 - Pure refactor — no behaviour change. Same tools, same shapes,
   same handlers. typecheck + build green.
 
+## Done (CI fix — line endings)
+
+- Three of my src/ files committed with CRLF on Windows; CI's
+  `prettier --check` (with `endOfLine: "lf"`) failed on Linux. Fixed
+  by running `prettier --write src/` to normalize, and locked
+  `*.{ts,js,mjs,cjs,json,md,yml,yaml}` to LF in `.gitattributes` so
+  future Windows commits can't drift again. Test + Publish workflows
+  green from `8aed22a` onward.
+
+## Done (deploy verified)
+
+- Portainer stack id 148 redeployed with `pull_image=true` via
+  `redeploy_git_stack`. ConfigHash advanced to `8aed22a`. Image
+  pulled, container recreated; `org.opencontainers.image.revision`
+  label = `2a66d8b` (the commit with all 25 new tools).
+- `/health` returns 200 with all 5 apps enabled.
+- MCP `tools/list` advertises **54 tools** total — 29 pre-existing +
+  25 new (5× `health`, 4× `diskspace`, 4× `list_quality_profiles`,
+  4× `list_root_folders`, 4× `wanted_missing`, 4× `wanted_cutoff`).
+- Verified with direct MCP wire call against
+  `http://carldog-nas:3002/mcp`, not just orchestrator UI.
+
 ## Next
 
-1. **Wire into Claude Desktop** and verify tool calls flow through
-   end-to-end from the assistant.
-2. **Layer in write tools** in the order the per-app docs indicate:
+1. **Layer in write tools** in the order the per-app docs indicate:
    start with command-trigger tools (low risk: search, refresh), then
    add-media, then queue manipulation, then release-grab.
-3. **Add tests** once a real Servarr test target is set up (don't mock).
+2. **Add tests** once a real Servarr test target is set up (don't mock).
 
 ## Open Decisions
 
