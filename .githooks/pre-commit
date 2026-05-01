@@ -10,17 +10,43 @@ fi
 echo "Running gitleaks..."
 gitleaks protect --staged --redact --config .gitleaks.toml
 
-# 2. PII pattern scan
+# Personal-domain email regex shared by the author-identity check and
+# the staged-content scan. Generic by design — no specific PII baked
+# into a publicly committed hook.
+PERSONAL_EMAIL_PATTERN='[A-Za-z0-9._%+-]+@(gmail|outlook|hotmail|yahoo|icloud|me|live|aol)\.[a-z]{2,}'
+
+# 2. Author identity check
+# The staged-content scan below doesn't see git metadata, so a
+# personal-domain author email can still leak into commit history
+# even when file contents are clean. Block it here, before the
+# no-staged-files early exit so empty commits are also covered.
+echo "Checking git author identity..."
+
+AUTHOR_IDENT=$(git var GIT_AUTHOR_IDENT)
+if echo "$AUTHOR_IDENT" | grep -qE "$PERSONAL_EMAIL_PATTERN"; then
+  echo "" >&2
+  echo "Configured git author identity matches a personal-domain pattern:" >&2
+  echo "  $AUTHOR_IDENT" >&2
+  echo "" >&2
+  echo "Set a GitHub noreply alias for this repo to avoid leaking it:" >&2
+  echo "  git config user.email '<numeric-id>+<login>@users.noreply.github.com'" >&2
+  echo "" >&2
+  echo "Find your numeric id at https://api.github.com/users/<login>." >&2
+  exit 1
+fi
+
+# 3. Staged-content PII pattern scan
 # Catches user-home directory references and personal-domain email
 # addresses that often leak into committed content (workstation paths,
-# author identity, etc.). Patterns are deliberately generic so the hook
-# can be committed publicly without itself containing any specific PII.
+# inline author signatures, etc.). Patterns are deliberately generic
+# so the hook can be committed publicly without itself containing any
+# specific PII.
 echo "Running PII pattern check..."
 
 PII_PATTERNS=(
   '[/\\]Users[/\\][A-Za-z0-9._-]+[/\\]'
   '[/\\]home[/\\][A-Za-z0-9._-]+[/\\]'
-  '[A-Za-z0-9._%+-]+@(gmail|outlook|hotmail|yahoo|icloud|me|live|aol)\.[a-z]{2,}'
+  "$PERSONAL_EMAIL_PATTERN"
 )
 
 STAGED=$(git diff --cached --name-only --diff-filter=AM)
