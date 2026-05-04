@@ -4,17 +4,17 @@
 
 ## Phase
 
-v1 read tools shipped and live in production. Cross-app observability
-(`health`, `diskspace`), add-media prerequisites (`list_quality_profiles`,
-`list_root_folders`), and wanted/missing + wanted/cutoff all deployed.
-54 tools advertised on the live server (29 pre-existing + 25 new).
-The `wanted` resource group is the first per-resource split — each
-media app's `tools/<app>/index.ts` now imports a sibling `wanted.ts`
-per the CLAUDE.md splitting rule. API research catalogued ~1070
-operations in `docs/SERVARR-API.md` + per-app docs. Deploy live on
+Write-tool rollout started. v1 read tools shipped (54 tools live in
+production, see Done sections below). First write tool added:
+`<app>_search_missing` for the four media apps — uses the new
+`triggerCommand(name, args)` plumbing on `ServarrClient` base, which
+POSTs to `/command` and returns the queued CommandResource. Each
+media app gets a new `tools/<app>/commands.ts` sibling (preemptive
+split — more command-trigger tools coming). Command names per the
+per-app docs flagged "verify against source/test call" — expecting
+to confirm via live deploy after this commit lands. Deploy live on
 the NAS at `http://your-nas:3002/mcp`, git-managed Portainer
-stack id 148, image `ghcr.io/carldog/servarr-mcp:latest`. Next:
-write tools, starting with command-trigger.
+stack id 148, image `ghcr.io/carldog/servarr-mcp:latest`.
 
 ## Done
 
@@ -163,12 +163,48 @@ write tools, starting with command-trigger.
 - Verified with direct MCP wire call against
   `http://your-nas:3002/mcp`, not just orchestrator UI.
 
+## Done (write tools — search_missing)
+
+- New `triggerCommand(name, args)` method on `ServarrClient` base —
+  POSTs to `/command` with the body `{name, ...args}`, returns the
+  queued CommandResource immediately. Backed by a new
+  `requestPost<T>(path, body)` helper (parallel to the existing
+  `request` GET helper).
+- New `tools/<app>/commands.ts` sibling for the four media apps,
+  exporting `registerCommandTools(server, client)`. Each app's
+  `index.ts` imports and calls it after the wanted registrations.
+- First registered tool per app: `<app>_search_missing` — triggers
+  an indexer search across all monitored, missing items. Async; tool
+  description spells out the queued nature so the LLM doesn't expect
+  search results inline. Command names used:
+  - Sonarr → `MissingEpisodeSearch`
+  - Radarr → `MissingMoviesSearch`
+  - Lidarr → `MissingAlbumSearch`
+  - Readarr → `MissingBookSearch`
+- Skipped Prowlarr — its existing `prowlarr_search` is the
+  synchronous `GET /search`; no async equivalent in the command
+  pattern.
+- Smoke-test against the live deploy after this lands — per-app
+  docs flagged the command names as "verify by source/test call" so
+  any 400s here mean the spelling needs adjustment.
+
 ## Next
 
-1. **Layer in write tools** in the order the per-app docs indicate:
-   start with command-trigger tools (low risk: search, refresh), then
-   add-media, then queue manipulation, then release-grab.
-2. **Add tests** once a real Servarr test target is set up (don't mock).
+1. **Smoke-test `<app>_search_missing` against the live deploy**
+   once the new image lands. Verify each command name; fix any
+   400s.
+2. **`<app>_refresh_<resource>`** in `commands.ts` —
+   `RefreshSeries` / `RefreshMovie` / `RefreshArtist` /
+   `RefreshAuthor`. Single-resource by id input.
+3. **`<app>_search_<resource>` with id args** —
+   `SeriesSearch`/`SeasonSearch`/`EpisodeSearch` for Sonarr,
+   `MoviesSearch` for Radarr, `ArtistSearch`/`AlbumSearch` for
+   Lidarr, `AuthorSearch`/`BookSearch` for Readarr.
+4. **Add-media write tools** (`<app>_add_<resource>`) — uses
+   `qualityProfileId` + `rootFolderPath` already shipped as read
+   tools. Higher risk; will need careful input validation.
+5. **Add tests** once a real Servarr test target is set up (don't
+   mock).
 
 ## Open Decisions
 

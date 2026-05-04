@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { asText } from "../../clients/base.js";
 import type { ReadarrClient } from "../../clients/readarr.js";
+import { registerCommandTools } from "./commands.js";
 import { registerWantedTools } from "./wanted.js";
 
 export function registerReadarrTools(
@@ -128,4 +129,5 @@ export function registerReadarrTools(
   );
 
   registerWantedTools(server, readarr);
+  registerCommandTools(server, readarr);
 }

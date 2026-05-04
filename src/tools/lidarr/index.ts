@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { asText } from "../../clients/base.js";
 import type { LidarrClient } from "../../clients/lidarr.js";
+import { registerCommandTools } from "./commands.js";
 import { registerWantedTools } from "./wanted.js";
 
 export function registerLidarrTools(
@@ -128,4 +129,5 @@ export function registerLidarrTools(
   );
 
   registerWantedTools(server, lidarr);
+  registerCommandTools(server, lidarr);
 }
