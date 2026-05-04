@@ -36,4 +36,42 @@ export function registerCommandTools(
         await lidarr.triggerCommand("RefreshArtist", { artistId: artist_id }),
       ),
   );
+
+  server.registerTool(
+    "lidarr_search_artist",
+    {
+      title: "Lidarr: Search Artist",
+      description:
+        "Trigger Lidarr to search indexers for all monitored, missing albums of one artist. Async — returns the queued CommandResource.",
+      inputSchema: {
+        artist_id: z
+          .number()
+          .int()
+          .describe("The Lidarr artist ID to search."),
+      },
+    },
+    async ({ artist_id }) =>
+      asText(
+        await lidarr.triggerCommand("ArtistSearch", { artistId: artist_id }),
+      ),
+  );
+
+  server.registerTool(
+    "lidarr_search_album",
+    {
+      title: "Lidarr: Search Albums",
+      description:
+        "Trigger Lidarr to search indexers for one or more specific albums. Async — returns the queued CommandResource.",
+      inputSchema: {
+        album_ids: z
+          .array(z.number().int())
+          .min(1)
+          .describe("One or more Lidarr album IDs to search."),
+      },
+    },
+    async ({ album_ids }) =>
+      asText(
+        await lidarr.triggerCommand("AlbumSearch", { albumIds: album_ids }),
+      ),
+  );
 }

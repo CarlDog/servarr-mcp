@@ -36,4 +36,42 @@ export function registerCommandTools(
         await readarr.triggerCommand("RefreshAuthor", { authorId: author_id }),
       ),
   );
+
+  server.registerTool(
+    "readarr_search_author",
+    {
+      title: "Readarr: Search Author",
+      description:
+        "Trigger Readarr to search indexers for all monitored, missing books of one author. Async — returns the queued CommandResource.",
+      inputSchema: {
+        author_id: z
+          .number()
+          .int()
+          .describe("The Readarr author ID to search."),
+      },
+    },
+    async ({ author_id }) =>
+      asText(
+        await readarr.triggerCommand("AuthorSearch", { authorId: author_id }),
+      ),
+  );
+
+  server.registerTool(
+    "readarr_search_book",
+    {
+      title: "Readarr: Search Books",
+      description:
+        "Trigger Readarr to search indexers for one or more specific books. Async — returns the queued CommandResource.",
+      inputSchema: {
+        book_ids: z
+          .array(z.number().int())
+          .min(1)
+          .describe("One or more Readarr book IDs to search."),
+      },
+    },
+    async ({ book_ids }) =>
+      asText(
+        await readarr.triggerCommand("BookSearch", { bookIds: book_ids }),
+      ),
+  );
 }
