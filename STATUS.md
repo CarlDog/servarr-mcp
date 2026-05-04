@@ -213,36 +213,39 @@ git-managed Portainer stack id 148.
   `set_stack_env` (which triggers its own redeploy) over chaining
   `redeploy_git_stack` afterward.
 
-## Done (write tools — smoke-test)
+## Done (write tools — search_missing + refresh)
 
-- All four `<app>_search_missing` calls returned real
-  CommandResources from the live deploy:
-  - Sonarr → `name: "MissingEpisodeSearch"`, status started
-  - Radarr → `name: "MissingMoviesSearch"`, status queued
-  - Lidarr → `name: "MissingAlbumSearch"`, status started
-  - Readarr → `name: "MissingBookSearch"`, status started
-- Per-app docs' command-name spellings were all correct on first
-  try; the "verify by source/test call" caveats can be removed in a
-  doc-tightening pass.
+Both batches shipped and smoke-tested end-to-end against the live
+deploy. All eight tools returned real CommandResources from the
+*arr apps; all command-name spellings + arg shapes per the per-app
+docs were correct on first try.
+
+| Tool | Command | Args |
+| --- | --- | --- |
+| `sonarr_search_missing` | `MissingEpisodeSearch` | — |
+| `radarr_search_missing` | `MissingMoviesSearch` | — |
+| `lidarr_search_missing` | `MissingAlbumSearch` | — |
+| `readarr_search_missing` | `MissingBookSearch` | — |
+| `sonarr_refresh_series` | `RefreshSeries` | `{seriesId}` |
+| `radarr_refresh_movie` | `RefreshMovie` | `{movieIds: [...]}` (plural) |
+| `lidarr_refresh_artist` | `RefreshArtist` | `{artistId}` |
+| `readarr_refresh_author` | `RefreshAuthor` | `{authorId}` |
+
+Live tool count: **62** (54 read + 8 command-trigger write).
 
 ## Next
 
-1. **`<app>_refresh_<resource>`** in `commands.ts` —
-   `RefreshSeries` / `RefreshMovie` / `RefreshArtist` /
-   `RefreshAuthor`. Single-resource by id input.
-2. **`<app>_search_<resource>` with id args** —
+1. **`<app>_search_<resource>` with id args** —
    `SeriesSearch`/`SeasonSearch`/`EpisodeSearch` for Sonarr,
    `MoviesSearch` for Radarr, `ArtistSearch`/`AlbumSearch` for
    Lidarr, `AuthorSearch`/`BookSearch` for Readarr.
-3. **Add-media write tools** (`<app>_add_<resource>`) — uses
+2. **Add-media write tools** (`<app>_add_<resource>`) — uses
    `qualityProfileId` + `rootFolderPath` already shipped as read
    tools. Higher risk; will need careful input validation.
-4. **Add tests** once a real Servarr test target is set up (don't
+3. **Add tests** once a real Servarr test target is set up (don't
    mock).
-5. **Doc tidy** — drop the "verify exact name" caveats from per-app
-   doc tables for the command names confirmed in this session
-   (`MissingEpisodeSearch`, `MissingMoviesSearch`,
-   `MissingAlbumSearch`, `MissingBookSearch`).
+4. **Doc tidy** — drop the "verify exact name" caveats from per-app
+   doc tables for the eight command names confirmed in this session.
 
 ## Open Decisions
 
