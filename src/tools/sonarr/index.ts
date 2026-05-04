@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { asText } from "../../clients/base.js";
 import type { SonarrClient } from "../../clients/sonarr.js";
+import { registerCommandTools } from "./commands.js";
 import { registerWantedTools } from "./wanted.js";
 
 export function registerSonarrTools(
@@ -136,4 +137,5 @@ export function registerSonarrTools(
   );
 
   registerWantedTools(server, sonarr);
+  registerCommandTools(server, sonarr);
 }

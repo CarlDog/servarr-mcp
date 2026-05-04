@@ -31,6 +31,26 @@ export class ServarrClient {
     return (await res.json()) as T;
   }
 
+  protected async requestPost<T>(path: string, body: unknown): Promise<T> {
+    const url = new URL(this.config.apiPath + path, this.config.url);
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "X-Api-Key": this.config.apiKey,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(
+        `${this.config.appName} ${res.status} ${res.statusText} for ${path}: ${text.slice(0, 200)}`,
+      );
+    }
+    return (await res.json()) as T;
+  }
+
   async systemStatus(): Promise<unknown> {
     return this.request("/system/status");
   }
@@ -69,6 +89,16 @@ export class ServarrClient {
 
   async wantedCutoff(pageSize = 20, monitored = true): Promise<unknown> {
     return this.request("/wanted/cutoff", { pageSize, monitored });
+  }
+
+  // Queue an async command. Returns the CommandResource immediately
+  // (id, status: "queued"); the work happens in the background. Tools
+  // should NOT poll synchronously — see SERVARR-API.md § Commands.
+  async triggerCommand(
+    name: string,
+    args: Record<string, unknown> = {},
+  ): Promise<unknown> {
+    return this.requestPost("/command", { name, ...args });
   }
 }
 
