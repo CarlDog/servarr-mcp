@@ -3,6 +3,7 @@ import { z } from "zod";
 import { asText } from "../../clients/base.js";
 import type { SonarrClient } from "../../clients/sonarr.js";
 import { registerCommandTools } from "./commands.js";
+import { registerSeriesTools } from "./series.js";
 import { registerWantedTools } from "./wanted.js";
 
 export function registerSonarrTools(
@@ -138,4 +139,5 @@ export function registerSonarrTools(
 
   registerWantedTools(server, sonarr);
   registerCommandTools(server, sonarr);
+  registerSeriesTools(server, sonarr);
 }
