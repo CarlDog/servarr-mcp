@@ -82,6 +82,17 @@ API keys are found under each app's *Settings → General → API Key*.
 
 At least one app must be configured or the server exits with an error.
 
+### Same-host deployments
+
+When the *arr apps run on the same Docker host as this container
+(typical home-lab setup), don't use the host's hostname (e.g.
+`my-nas`) in the `*_URL` vars — Docker's DNS context can't resolve
+the host's own name from inside a container. Use
+`http://host.docker.internal:<port>` instead. The provided
+`docker-compose.yml` already maps `host.docker.internal` to the host
+gateway via `extra_hosts`, so this works on Linux Docker too (not
+just Docker Desktop).
+
 ## Run with Docker
 
 ```bash
