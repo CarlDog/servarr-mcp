@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import { asText } from "../../clients/base.js";
 import type { LidarrClient } from "../../clients/lidarr.js";
 
@@ -15,5 +16,24 @@ export function registerCommandTools(
       inputSchema: {},
     },
     async () => asText(await lidarr.triggerCommand("MissingAlbumSearch")),
+  );
+
+  server.registerTool(
+    "lidarr_refresh_artist",
+    {
+      title: "Lidarr: Refresh Artist Metadata",
+      description:
+        "Trigger Lidarr to re-pull metadata from MusicBrainz for one artist (discography, artwork). Async — returns the queued CommandResource.",
+      inputSchema: {
+        artist_id: z
+          .number()
+          .int()
+          .describe("The Lidarr artist ID to refresh."),
+      },
+    },
+    async ({ artist_id }) =>
+      asText(
+        await lidarr.triggerCommand("RefreshArtist", { artistId: artist_id }),
+      ),
   );
 }

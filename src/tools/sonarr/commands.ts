@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import { asText } from "../../clients/base.js";
 import type { SonarrClient } from "../../clients/sonarr.js";
 
@@ -15,5 +16,21 @@ export function registerCommandTools(
       inputSchema: {},
     },
     async () => asText(await sonarr.triggerCommand("MissingEpisodeSearch")),
+  );
+
+  server.registerTool(
+    "sonarr_refresh_series",
+    {
+      title: "Sonarr: Refresh Series Metadata",
+      description:
+        "Trigger Sonarr to re-pull metadata from TVDB for one series (cast, episode list, artwork). Async — returns the queued CommandResource.",
+      inputSchema: {
+        series_id: z.number().int().describe("The Sonarr series ID to refresh."),
+      },
+    },
+    async ({ series_id }) =>
+      asText(
+        await sonarr.triggerCommand("RefreshSeries", { seriesId: series_id }),
+      ),
   );
 }
