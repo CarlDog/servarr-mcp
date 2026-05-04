@@ -4,17 +4,21 @@
 
 ## Phase
 
-Write-tool rollout started. v1 read tools shipped (54 tools live in
-production, see Done sections below). First write tool added:
-`<app>_search_missing` for the four media apps — uses the new
-`triggerCommand(name, args)` plumbing on `ServarrClient` base, which
-POSTs to `/command` and returns the queued CommandResource. Each
-media app gets a new `tools/<app>/commands.ts` sibling (preemptive
-split — more command-trigger tools coming). Command names per the
-per-app docs flagged "verify against source/test call" — expecting
-to confirm via live deploy after this commit lands. Deploy live on
-the NAS at `http://your-nas:3002/mcp`, git-managed Portainer
-stack id 148, image `ghcr.io/carldog/servarr-mcp:latest`.
+Write-tool rollout in flight. First write tool batch shipped and
+**verified end-to-end against the live deploy**: all four
+`<app>_search_missing` tools succeeded (Sonarr, Radarr, Lidarr,
+Readarr each returned a real CommandResource with id, status, and
+the correct command name — no spelling fixes needed). Plumbing in
+place: `triggerCommand(name, args)` on `ServarrClient` base via a
+new `requestPost` helper. Each media app has a `tools/<app>/commands.ts`
+sibling (preemptive split — more command-trigger tools coming).
+Same-host hostname trap discovered + fixed: `docker-compose.yml` now
+ships `extra_hosts: ["host.docker.internal:host-gateway"]` and the
+NAS deploy's Portainer stack env was switched to
+`http://host.docker.internal:<port>` — without it the container
+can't resolve the bare host hostname and every tool call returns
+"fetch failed" silently. Deploy live at `http://your-nas:3002/mcp`,
+git-managed Portainer stack id 148.
 
 ## Done
 
@@ -188,23 +192,57 @@ stack id 148, image `ghcr.io/carldog/servarr-mcp:latest`.
   docs flagged the command names as "verify by source/test call" so
   any 400s here mean the spelling needs adjustment.
 
+## Done (deploy fix — same-host hostname trap)
+
+- `docker-compose.yml` (commit `0f24d23`) now maps
+  `host.docker.internal:host-gateway` via `extra_hosts`, so
+  containers on the same host as the *arr apps can resolve the host
+  via that alias regardless of OS (Linux Docker too — not just
+  Docker Desktop).
+- README updated with the same-host guidance.
+- NAS deploy's Portainer stack-level env switched from
+  `http://your-nas:<port>` to `http://host.docker.internal:<port>`
+  for all five `<APP>_URL` vars via `portainer_set_stack_env`. (API
+  keys preserved via the noRedact server-side round-trip.)
+- Verified ground truth via `docker inspect` —
+  `HostConfig.ExtraHosts` and `Config.Env` both correct on the
+  running container.
+- **Note for future:** calling `redeploy_git_stack` immediately
+  after `set_stack_env` rolled the env back to its previous values.
+  The standalone `set_stack_env` redeploy worked. Prefer
+  `set_stack_env` (which triggers its own redeploy) over chaining
+  `redeploy_git_stack` afterward.
+
+## Done (write tools — smoke-test)
+
+- All four `<app>_search_missing` calls returned real
+  CommandResources from the live deploy:
+  - Sonarr → `name: "MissingEpisodeSearch"`, status started
+  - Radarr → `name: "MissingMoviesSearch"`, status queued
+  - Lidarr → `name: "MissingAlbumSearch"`, status started
+  - Readarr → `name: "MissingBookSearch"`, status started
+- Per-app docs' command-name spellings were all correct on first
+  try; the "verify by source/test call" caveats can be removed in a
+  doc-tightening pass.
+
 ## Next
 
-1. **Smoke-test `<app>_search_missing` against the live deploy**
-   once the new image lands. Verify each command name; fix any
-   400s.
-2. **`<app>_refresh_<resource>`** in `commands.ts` —
+1. **`<app>_refresh_<resource>`** in `commands.ts` —
    `RefreshSeries` / `RefreshMovie` / `RefreshArtist` /
    `RefreshAuthor`. Single-resource by id input.
-3. **`<app>_search_<resource>` with id args** —
+2. **`<app>_search_<resource>` with id args** —
    `SeriesSearch`/`SeasonSearch`/`EpisodeSearch` for Sonarr,
    `MoviesSearch` for Radarr, `ArtistSearch`/`AlbumSearch` for
    Lidarr, `AuthorSearch`/`BookSearch` for Readarr.
-4. **Add-media write tools** (`<app>_add_<resource>`) — uses
+3. **Add-media write tools** (`<app>_add_<resource>`) — uses
    `qualityProfileId` + `rootFolderPath` already shipped as read
    tools. Higher risk; will need careful input validation.
-5. **Add tests** once a real Servarr test target is set up (don't
+4. **Add tests** once a real Servarr test target is set up (don't
    mock).
+5. **Doc tidy** — drop the "verify exact name" caveats from per-app
+   doc tables for the command names confirmed in this session
+   (`MissingEpisodeSearch`, `MissingMoviesSearch`,
+   `MissingAlbumSearch`, `MissingBookSearch`).
 
 ## Open Decisions
 
