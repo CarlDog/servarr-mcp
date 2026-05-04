@@ -36,4 +36,23 @@ export function registerCommandTools(
         await radarr.triggerCommand("RefreshMovie", { movieIds: movie_ids }),
       ),
   );
+
+  server.registerTool(
+    "radarr_search_movie",
+    {
+      title: "Radarr: Search Movies",
+      description:
+        "Trigger Radarr to search indexers for one or more specific movies. Async — returns the queued CommandResource.",
+      inputSchema: {
+        movie_ids: z
+          .array(z.number().int())
+          .min(1)
+          .describe("One or more Radarr movie IDs to search."),
+      },
+    },
+    async ({ movie_ids }) =>
+      asText(
+        await radarr.triggerCommand("MoviesSearch", { movieIds: movie_ids }),
+      ),
+  );
 }
