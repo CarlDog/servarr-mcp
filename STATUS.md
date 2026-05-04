@@ -4,21 +4,17 @@
 
 ## Phase
 
-Write-tool rollout in flight. First write tool batch shipped and
-**verified end-to-end against the live deploy**: all four
-`<app>_search_missing` tools succeeded (Sonarr, Radarr, Lidarr,
-Readarr each returned a real CommandResource with id, status, and
-the correct command name — no spelling fixes needed). Plumbing in
-place: `triggerCommand(name, args)` on `ServarrClient` base via a
-new `requestPost` helper. Each media app has a `tools/<app>/commands.ts`
-sibling (preemptive split — more command-trigger tools coming).
-Same-host hostname trap discovered + fixed: `docker-compose.yml` now
-ships `extra_hosts: ["host.docker.internal:host-gateway"]` and the
-NAS deploy's Portainer stack env was switched to
-`http://host.docker.internal:<port>` — without it the container
-can't resolve the bare host hostname and every tool call returns
-"fetch failed" silently. Deploy live at `http://carldog-nas:3002/mcp`,
-git-managed Portainer stack id 148.
+Command-trigger write tools complete. **70 tools live in production**
+(54 read + 16 command-trigger write), every one smoke-tested end-to-end
+against the NAS deploy. Plumbing: `triggerCommand(name, args)` on
+`ServarrClient` base via a `requestPost` helper; per-app
+`tools/<app>/commands.ts` siblings hold the registrations. Same-host
+hostname trap discovered and fixed: `docker-compose.yml` ships
+`extra_hosts: ["host.docker.internal:host-gateway"]` and the NAS
+stack env uses `http://host.docker.internal:<port>` — without it,
+every tool call returned "fetch failed" silently. Deploy live at
+`http://carldog-nas:3002/mcp`, git-managed Portainer stack id 148.
+Next focus: add-media write tools (`<app>_add_<resource>`).
 
 ## Done
 
@@ -213,12 +209,12 @@ git-managed Portainer stack id 148.
   `set_stack_env` (which triggers its own redeploy) over chaining
   `redeploy_git_stack` afterward.
 
-## Done (write tools — search_missing + refresh)
+## Done (write tools — command-trigger complete)
 
-Both batches shipped and smoke-tested end-to-end against the live
-deploy. All eight tools returned real CommandResources from the
-*arr apps; all command-name spellings + arg shapes per the per-app
-docs were correct on first try.
+All three command-trigger batches shipped and smoke-tested
+end-to-end against the live deploy. All sixteen tools returned real
+CommandResources from the *arr apps; every command-name spelling +
+arg shape per the per-app docs was correct on first try.
 
 | Tool | Command | Args |
 | --- | --- | --- |
@@ -227,25 +223,36 @@ docs were correct on first try.
 | `lidarr_search_missing` | `MissingAlbumSearch` | — |
 | `readarr_search_missing` | `MissingBookSearch` | — |
 | `sonarr_refresh_series` | `RefreshSeries` | `{seriesId}` |
-| `radarr_refresh_movie` | `RefreshMovie` | `{movieIds: [...]}` (plural) |
+| `radarr_refresh_movie` | `RefreshMovie` | `{movieIds: [...]}` |
 | `lidarr_refresh_artist` | `RefreshArtist` | `{artistId}` |
 | `readarr_refresh_author` | `RefreshAuthor` | `{authorId}` |
+| `sonarr_search_series` | `SeriesSearch` | `{seriesId}` |
+| `sonarr_search_season` | `SeasonSearch` | `{seriesId, seasonNumber}` |
+| `sonarr_search_episode` | `EpisodeSearch` | `{episodeIds: [...]}` |
+| `radarr_search_movie` | `MoviesSearch` | `{movieIds: [...]}` |
+| `lidarr_search_artist` | `ArtistSearch` | `{artistId}` |
+| `lidarr_search_album` | `AlbumSearch` | `{albumIds: [...]}` |
+| `readarr_search_author` | `AuthorSearch` | `{authorId}` |
+| `readarr_search_book` | `BookSearch` | `{bookIds: [...]}` |
 
-Live tool count: **62** (54 read + 8 command-trigger write).
+Pattern confirmed: parent resources (series/artist/author) take a
+single id; leaf resources (episode/movie/album/book) take an array.
+
+Live tool count: **70** (54 read + 16 command-trigger write).
 
 ## Next
 
-1. **`<app>_search_<resource>` with id args** —
-   `SeriesSearch`/`SeasonSearch`/`EpisodeSearch` for Sonarr,
-   `MoviesSearch` for Radarr, `ArtistSearch`/`AlbumSearch` for
-   Lidarr, `AuthorSearch`/`BookSearch` for Readarr.
-2. **Add-media write tools** (`<app>_add_<resource>`) — uses
+1. **Add-media write tools** (`<app>_add_<resource>`) — uses
    `qualityProfileId` + `rootFolderPath` already shipped as read
-   tools. Higher risk; will need careful input validation.
-3. **Add tests** once a real Servarr test target is set up (don't
+   tools. Higher risk: input validation matters (TVDB/TMDB IDs,
+   monitored, search-on-add toggles, season/season-pack handling
+   for Sonarr). The lookup tools (`*_lookup_<resource>`) return the
+   metadata-source IDs we need.
+2. **Add tests** once a real Servarr test target is set up (don't
    mock).
-4. **Doc tidy** — drop the "verify exact name" caveats from per-app
-   doc tables for the eight command names confirmed in this session.
+3. **Doc tidy** — drop the "verify exact name" caveats from per-app
+   doc tables for the sixteen command names confirmed in this
+   session.
 
 ## Open Decisions
 
