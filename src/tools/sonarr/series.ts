@@ -91,4 +91,69 @@ export function registerSeriesTools(
       return asText(await sonarr.addSeries(body));
     },
   );
+
+  server.registerTool(
+    "sonarr_edit_series",
+    {
+      title: "Sonarr: Edit Series",
+      description:
+        "Edit settings on an existing Sonarr series. Internally GETs the current SeriesResource, applies your changes, and PUTs the full resource back. Pass only the fields you want to change — others are preserved. WARNING: changing root_folder_path moves files on disk; watch your storage and download client.",
+      inputSchema: {
+        id: z
+          .number()
+          .int()
+          .describe("The Sonarr series id (from sonarr_list_series)."),
+        monitored: z
+          .boolean()
+          .optional()
+          .describe(
+            "Toggle whether Sonarr tracks this series for new episodes.",
+          ),
+        quality_profile_id: z
+          .number()
+          .int()
+          .optional()
+          .describe(
+            "Change the quality profile (from sonarr_list_quality_profiles).",
+          ),
+        root_folder_path: z
+          .string()
+          .optional()
+          .describe(
+            "Change the root folder. WARNING: this moves the series files on disk.",
+          ),
+        season_folder: z
+          .boolean()
+          .optional()
+          .describe(
+            "Toggle the per-season subfolder organization.",
+          ),
+        tags: z
+          .array(z.number().int())
+          .optional()
+          .describe("Replace the tag id list (full list, not append)."),
+      },
+    },
+    async ({
+      id,
+      monitored,
+      quality_profile_id,
+      root_folder_path,
+      season_folder,
+      tags,
+    }) => {
+      const current = (await sonarr.getSeries(id)) as Record<string, unknown>;
+      const updated: Record<string, unknown> = { ...current };
+      if (monitored !== undefined) updated.monitored = monitored;
+      if (quality_profile_id !== undefined) {
+        updated.qualityProfileId = quality_profile_id;
+      }
+      if (root_folder_path !== undefined) {
+        updated.rootFolderPath = root_folder_path;
+      }
+      if (season_folder !== undefined) updated.seasonFolder = season_folder;
+      if (tags !== undefined) updated.tags = tags;
+      return asText(await sonarr.editSeries(id, updated));
+    },
+  );
 }
