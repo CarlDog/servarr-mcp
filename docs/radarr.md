@@ -149,7 +149,7 @@ choose ids.
 | `radarr_add_movie`         | `POST /movie` (body: `MovieResource`) | Medium     | Needs `tmdbId`, `qualityProfileId`, `rootFolderPath`, `monitored`, `addOptions.searchForMovie`. Must come from a prior `lookup_movie` call. |
 | `radarr_edit_movie`        | `PUT /movie/{id}`                     | Medium     | Toggle monitor, change quality profile, change root folder. Single-movie. |
 | `radarr_edit_collection`   | `PUT /collection/{id}` or `PUT /collection` | Medium | Toggle collection-level monitoring (e.g. monitor every MCU film as it releases). Radarr-only. |
-| `radarr_search_movie`      | `POST /command` (`name: "MoviesSearch"`) | Low     | Trigger a search for one or more specific movies. (Verify exact name — `MoviesSearch` vs `MovieSearch` — by reading source or making a test call; spec doesn't enumerate command names. See [SERVARR-API.md § Commands](SERVARR-API.md#commands-async-actions).) |
+| `radarr_search_movie`      | `POST /command` (`name: "MoviesSearch"`) | Low     | Trigger a search for one or more specific movies. Command name verified live (it's the plural `MoviesSearch`, not `MovieSearch`). |
 | `radarr_refresh_movie`     | `POST /command` (`name: "RefreshMovie"`) | Low     | Re-pull metadata from TMDB.                                        |
 | `radarr_search_missing`    | `POST /command` (`name: "MissingMoviesSearch"`) | Low | Search across all monitored, missing movies.                       |
 | `radarr_get_command`       | `GET /command/{id}`                   | Low        | Companion poll for any of the above.                               |
