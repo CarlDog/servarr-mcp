@@ -3,6 +3,7 @@ import { z } from "zod";
 import { asText } from "../../clients/base.js";
 import type { RadarrClient } from "../../clients/radarr.js";
 import { registerCommandTools } from "./commands.js";
+import { registerMovieTools } from "./movies.js";
 import { registerWantedTools } from "./wanted.js";
 
 export function registerRadarrTools(
@@ -126,4 +127,5 @@ export function registerRadarrTools(
 
   registerWantedTools(server, radarr);
   registerCommandTools(server, radarr);
+  registerMovieTools(server, radarr);
 }
