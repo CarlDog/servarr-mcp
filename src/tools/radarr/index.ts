@@ -4,6 +4,7 @@ import { asText } from "../../clients/base.js";
 import type { RadarrClient } from "../../clients/radarr.js";
 import { registerCommandTools } from "./commands.js";
 import { registerMovieTools } from "./movies.js";
+import { registerQueueTools } from "./queue.js";
 import { registerWantedTools } from "./wanted.js";
 
 export function registerRadarrTools(
@@ -51,16 +52,6 @@ export function registerRadarrTools(
       },
     },
     async ({ start, end }) => asText(await radarr.calendar(start, end)),
-  );
-
-  server.registerTool(
-    "radarr_queue",
-    {
-      title: "Radarr: Queue",
-      description: "Get the current Radarr download queue.",
-      inputSchema: {},
-    },
-    async () => asText(await radarr.queue()),
   );
 
   server.registerTool(
@@ -125,6 +116,7 @@ export function registerRadarrTools(
     async () => asText(await radarr.rootFolders()),
   );
 
+  registerQueueTools(server, radarr);
   registerWantedTools(server, radarr);
   registerCommandTools(server, radarr);
   registerMovieTools(server, radarr);
