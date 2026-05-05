@@ -17,6 +17,10 @@ export class ReadarrClient extends ServarrClient {
     return this.request("/author/lookup", { term });
   }
 
+  async addAuthor(body: unknown): Promise<unknown> {
+    return this.requestPost("/author", body);
+  }
+
   async listBooks(authorId?: number): Promise<unknown> {
     if (authorId === undefined) {
       return this.request("/book");
