@@ -67,4 +67,71 @@ export function registerMovieTools(
       return asText(await radarr.addMovie(body));
     },
   );
+
+  server.registerTool(
+    "radarr_edit_movie",
+    {
+      title: "Radarr: Edit Movie",
+      description:
+        "Edit settings on an existing Radarr movie. Internally GETs the current MovieResource, applies your changes, and PUTs the full resource back. Pass only the fields you want to change — others are preserved. WARNING: changing root_folder_path moves files on disk.",
+      inputSchema: {
+        id: z
+          .number()
+          .int()
+          .describe("The Radarr movie id (from radarr_list_movies)."),
+        monitored: z
+          .boolean()
+          .optional()
+          .describe(
+            "Toggle whether Radarr tracks this movie for upgrades/grabs.",
+          ),
+        quality_profile_id: z
+          .number()
+          .int()
+          .optional()
+          .describe(
+            "Change the quality profile (from radarr_list_quality_profiles).",
+          ),
+        root_folder_path: z
+          .string()
+          .optional()
+          .describe(
+            "Change the root folder. WARNING: this moves the movie files on disk.",
+          ),
+        minimum_availability: z
+          .enum(["tba", "announced", "inCinemas", "released", "preDB"])
+          .optional()
+          .describe(
+            "When to consider the movie 'available' (Radarr-specific).",
+          ),
+        tags: z
+          .array(z.number().int())
+          .optional()
+          .describe("Replace the tag id list (full list, not append)."),
+      },
+    },
+    async ({
+      id,
+      monitored,
+      quality_profile_id,
+      root_folder_path,
+      minimum_availability,
+      tags,
+    }) => {
+      const current = (await radarr.getMovie(id)) as Record<string, unknown>;
+      const updated: Record<string, unknown> = { ...current };
+      if (monitored !== undefined) updated.monitored = monitored;
+      if (quality_profile_id !== undefined) {
+        updated.qualityProfileId = quality_profile_id;
+      }
+      if (root_folder_path !== undefined) {
+        updated.rootFolderPath = root_folder_path;
+      }
+      if (minimum_availability !== undefined) {
+        updated.minimumAvailability = minimum_availability;
+      }
+      if (tags !== undefined) updated.tags = tags;
+      return asText(await radarr.editMovie(id, updated));
+    },
+  );
 }
