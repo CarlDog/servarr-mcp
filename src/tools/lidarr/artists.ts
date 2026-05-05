@@ -92,4 +92,72 @@ export function registerArtistTools(
       return asText(await lidarr.addArtist(body));
     },
   );
+
+  server.registerTool(
+    "lidarr_edit_artist",
+    {
+      title: "Lidarr: Edit Artist",
+      description:
+        "Edit settings on an existing Lidarr artist. Internally GETs the current ArtistResource, applies your changes, and PUTs the full resource back. Pass only the fields you want to change — others are preserved. WARNING: changing root_folder_path moves files on disk.",
+      inputSchema: {
+        id: z
+          .number()
+          .int()
+          .describe("The Lidarr artist id (from lidarr_list_artists)."),
+        monitored: z
+          .boolean()
+          .optional()
+          .describe(
+            "Toggle whether Lidarr tracks this artist for new releases.",
+          ),
+        quality_profile_id: z
+          .number()
+          .int()
+          .optional()
+          .describe(
+            "Change the quality profile (from lidarr_list_quality_profiles).",
+          ),
+        metadata_profile_id: z
+          .number()
+          .int()
+          .optional()
+          .describe(
+            "Change the metadata profile (from lidarr_list_metadata_profiles).",
+          ),
+        root_folder_path: z
+          .string()
+          .optional()
+          .describe(
+            "Change the root folder. WARNING: this moves the artist's files on disk.",
+          ),
+        tags: z
+          .array(z.number().int())
+          .optional()
+          .describe("Replace the tag id list (full list, not append)."),
+      },
+    },
+    async ({
+      id,
+      monitored,
+      quality_profile_id,
+      metadata_profile_id,
+      root_folder_path,
+      tags,
+    }) => {
+      const current = (await lidarr.getArtist(id)) as Record<string, unknown>;
+      const updated: Record<string, unknown> = { ...current };
+      if (monitored !== undefined) updated.monitored = monitored;
+      if (quality_profile_id !== undefined) {
+        updated.qualityProfileId = quality_profile_id;
+      }
+      if (metadata_profile_id !== undefined) {
+        updated.metadataProfileId = metadata_profile_id;
+      }
+      if (root_folder_path !== undefined) {
+        updated.rootFolderPath = root_folder_path;
+      }
+      if (tags !== undefined) updated.tags = tags;
+      return asText(await lidarr.editArtist(id, updated));
+    },
+  );
 }

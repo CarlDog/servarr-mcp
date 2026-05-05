@@ -92,4 +92,72 @@ export function registerAuthorTools(
       return asText(await readarr.addAuthor(body));
     },
   );
+
+  server.registerTool(
+    "readarr_edit_author",
+    {
+      title: "Readarr: Edit Author",
+      description:
+        "Edit settings on an existing Readarr author. Internally GETs the current AuthorResource, applies your changes, and PUTs the full resource back. Pass only the fields you want to change — others are preserved. WARNING: changing root_folder_path moves files on disk.",
+      inputSchema: {
+        id: z
+          .number()
+          .int()
+          .describe("The Readarr author id (from readarr_list_authors)."),
+        monitored: z
+          .boolean()
+          .optional()
+          .describe(
+            "Toggle whether Readarr tracks this author for new releases.",
+          ),
+        quality_profile_id: z
+          .number()
+          .int()
+          .optional()
+          .describe(
+            "Change the quality profile (from readarr_list_quality_profiles).",
+          ),
+        metadata_profile_id: z
+          .number()
+          .int()
+          .optional()
+          .describe(
+            "Change the metadata profile (from readarr_list_metadata_profiles).",
+          ),
+        root_folder_path: z
+          .string()
+          .optional()
+          .describe(
+            "Change the root folder. WARNING: this moves the author's files on disk.",
+          ),
+        tags: z
+          .array(z.number().int())
+          .optional()
+          .describe("Replace the tag id list (full list, not append)."),
+      },
+    },
+    async ({
+      id,
+      monitored,
+      quality_profile_id,
+      metadata_profile_id,
+      root_folder_path,
+      tags,
+    }) => {
+      const current = (await readarr.getAuthor(id)) as Record<string, unknown>;
+      const updated: Record<string, unknown> = { ...current };
+      if (monitored !== undefined) updated.monitored = monitored;
+      if (quality_profile_id !== undefined) {
+        updated.qualityProfileId = quality_profile_id;
+      }
+      if (metadata_profile_id !== undefined) {
+        updated.metadataProfileId = metadata_profile_id;
+      }
+      if (root_folder_path !== undefined) {
+        updated.rootFolderPath = root_folder_path;
+      }
+      if (tags !== undefined) updated.tags = tags;
+      return asText(await readarr.editAuthor(id, updated));
+    },
+  );
 }
