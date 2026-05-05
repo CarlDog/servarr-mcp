@@ -4,17 +4,21 @@
 
 ## Phase
 
-Command-trigger write tools complete. **70 tools live in production**
-(54 read + 16 command-trigger write), every one smoke-tested end-to-end
-against the NAS deploy. Plumbing: `triggerCommand(name, args)` on
-`ServarrClient` base via a `requestPost` helper; per-app
-`tools/<app>/commands.ts` siblings hold the registrations. Same-host
-hostname trap discovered and fixed: `docker-compose.yml` ships
-`extra_hosts: ["host.docker.internal:host-gateway"]` and the NAS
-stack env uses `http://host.docker.internal:<port>` — without it,
-every tool call returned "fetch failed" silently. Deploy live at
-`http://your-nas:3002/mcp`, git-managed Portainer stack id 148.
-Next focus: add-media write tools (`<app>_add_<resource>`).
+Add-media phase complete. **58 tools live on the NAS deploy** with
+Sonarr/Radarr/Lidarr/Prowlarr enabled (Readarr dropped from the
+deploy until its upstream metadata source is operational — see
+"Readarr disabled" below). Three of four add-media write tools
+smoke-tested end-to-end (`sonarr_add_series`, `radarr_add_movie`,
+`lidarr_add_artist` all returned the expected
+`<App>ExistsValidator` 400s on existing ids). Code-complete tool
+catalogue covers: cross-app observability (health/diskspace),
+add-media prerequisites (list_quality_profiles, list_root_folders,
+list_metadata_profiles for Lidarr/Readarr), wanted/missing +
+wanted/cutoff queries, full command-trigger surface (16 tools),
+and add-media for the four media apps. Same-host hostname trap
+fixed early in this phase (`extra_hosts: host.docker.internal:host-gateway`
+in compose, env URLs use `host.docker.internal:<port>`). Deploy
+git-managed Portainer stack id 148.
 
 ## Done
 
@@ -266,40 +270,45 @@ Per-app sibling files: `tools/sonarr/series.ts`,
 Safe defaults are uniform: `monitored=true`, search-on-add `false`
 (flips the unsafe server-side default of `true` for all four).
 
-Live tool count: **78** (54 read + 16 command-trigger + 2 list-metadata-profiles + 4 add-media).
+Live tool count with all four media apps + Prowlarr enabled: **76**
+(46 read + 16 command-trigger + 2 list-metadata-profiles + 4 add-media,
+across 5 apps). With Readarr currently disabled (see below), the
+running deploy advertises **58 tools** across Sonarr, Radarr, Lidarr,
+Prowlarr.
 
-## Known limitation — Readarr metadata source
+## Readarr disabled until upstream metadata source is operational
 
 `readarr_lookup_author` (existing read tool) and `readarr_add_author`
 (new) both depend on Readarr's `/author/lookup` endpoint, which
 queries Goodreads upstream. **Goodreads' public API has been
 deprecated; Readarr returns 503 with
 `NzbDrone.Core.MetadataSource.Goodreads.GoodreadsException` for any
-lookup query — by name OR by foreign id.** This is a well-known
-*arr community issue, not a bug in our code.
+lookup query — by name OR by foreign id.** Well-known *arr
+community issue, not a bug in our code.
 
-The tool code follows the same correct pattern as the three working
-add-media tools. It will start working as soon as Readarr's metadata
-source is operational (either Goodreads coming back, or Readarr
-migrating to OpenLibrary / a community fork). Smoke-test for
-`readarr_add_author` is deferred until that happens.
+Decision: **dropped Readarr from the deploy entirely** by removing
+`READARR_URL` and `READARR_API_KEY` from the Portainer stack env
+(via `portainer_set_stack_env --remove`). Per CLAUDE.md, missing env
+vars → tools simply aren't registered. Cleaner than leaving 18
+readarr_* tools registered where most either need lookup (broken)
+or query Readarr's local DB (works, but the LLM has no way to add
+new authors so library would only shrink).
 
-`readarr_lookup_author` was already broken before this work — I
-flagged it during smoke-test rather than retrofitting, but you may
-want to drop the tool registration entirely until upstream is fixed
-(otherwise the LLM will keep trying it and getting 503s).
+To re-enable when Readarr's metadata source is fixed (Goodreads back,
+or Readarr migrates to OpenLibrary / a community fork): re-add the
+two env vars in Portainer. The code is still in `src/clients/readarr.ts`
++ `src/tools/readarr/`; the `readarr_add_author` tool is structurally
+identical to the three verified ones and should work once upstream
+is operational.
 
 ## Next
 
-1. **Decide on `readarr_lookup_author` / `readarr_add_author`** —
-   keep registered (returns 503), unregister until upstream is back,
-   or replace with a different metadata source.
-2. **Add tests** once a real Servarr test target is set up (don't
+1. **Add tests** once a real Servarr test target is set up (don't
    mock).
-3. **Doc tidy** — drop the "verify exact name" caveats from per-app
+2. **Doc tidy** — drop the "verify exact name" caveats from per-app
    doc tables for the sixteen command names confirmed in this
    session.
-4. **Future write tools** beyond add-media: queue manipulation
+3. **Future write tools** beyond add-media: queue manipulation
    (`<app>_queue_remove`), release-grab (`<app>_grab_release`),
    edit-media (`<app>_edit_<resource>`).
 
