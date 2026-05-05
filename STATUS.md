@@ -240,17 +240,41 @@ single id; leaf resources (episode/movie/album/book) take an array.
 
 Live tool count: **70** (54 read + 16 command-trigger write).
 
+## Done (write tools — sonarr_add_series MVP)
+
+- **`sonarr_add_series`** registered (new
+  `src/tools/sonarr/series.ts` sibling per the resource-family
+  splitting rule). Tool inputs: `tvdb_id`, `quality_profile_id`,
+  `root_folder_path`, plus optional `monitored`, `season_folder`,
+  `monitor` enum, `search_for_missing_episodes`.
+- Tool internally calls `sonarr.lookupSeries("tvdb:<id>")` to fetch
+  the full SeriesResource, merges in user choices + `addOptions`,
+  then POSTs `/series` via the new
+  `SonarrClient.addSeries(body)` (wraps base `requestPost`).
+- Safe defaults: `monitored=true`, `season_folder=true`,
+  `monitor="all"`, `search_for_missing_episodes=false` (flips
+  Sonarr's server-side default of true to avoid surprise indexer
+  hits on add).
+- Smoke-tested with an existing series's TVDB id — Sonarr returned
+  the expected `SeriesExistsValidator` 400 ("This series has
+  already been added"), confirming the lookup-merge-POST flow works
+  end-to-end.
+
 ## Next
 
-1. **Add-media write tools** (`<app>_add_<resource>`) — uses
-   `qualityProfileId` + `rootFolderPath` already shipped as read
-   tools. Higher risk: input validation matters (TVDB/TMDB IDs,
-   monitored, search-on-add toggles, season/season-pack handling
-   for Sonarr). The lookup tools (`*_lookup_<resource>`) return the
-   metadata-source IDs we need.
-2. **Add tests** once a real Servarr test target is set up (don't
+1. **`radarr_add_movie`** — mirror sonarr_add_series. Different
+   foreign id (`tmdb_id`), different addOptions key
+   (`searchForMovie`), different monitor enum. Per radarr.md
+   gotchas: addOptions needs explicit zod inputs.
+2. **`<app>_list_metadata_profiles`** read tool for Lidarr +
+   Readarr — prerequisite for their add-media tools (POST /artist
+   and POST /author require `metadataProfileId` in addition to
+   `qualityProfileId`).
+3. **`lidarr_add_artist`** and **`readarr_add_author`** — once the
+   metadata-profiles read tool ships.
+4. **Add tests** once a real Servarr test target is set up (don't
    mock).
-3. **Doc tidy** — drop the "verify exact name" caveats from per-app
+5. **Doc tidy** — drop the "verify exact name" caveats from per-app
    doc tables for the sixteen command names confirmed in this
    session.
 
