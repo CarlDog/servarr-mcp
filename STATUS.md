@@ -4,18 +4,19 @@
 
 ## Phase
 
-Queue-manipulation surface complete (remove + regrab).
-**64 tools live on the NAS deploy** (Sonarr/Radarr/Lidarr/Prowlarr;
-Readarr still disabled until its Goodreads upstream is operational).
-Code-complete catalogue now covers: cross-app observability
-(health/diskspace), add-media prerequisites
-(list_quality_profiles, list_root_folders, list_metadata_profiles
-for Lidarr/Readarr), wanted/missing + wanted/cutoff queries, full
-command-trigger surface (16 tools), add-media for the four media
-apps, and `<app>_queue_remove` + `<app>_queue_regrab` for the four
-media apps. All four queue resources extracted into per-app
-`tools/<app>/queue.ts` siblings (read + write together) per the
-per-resource splitting rule. Same-host hostname trap fixed early
+Queue + history write surface complete. **67 tools live on the NAS
+deploy** (Sonarr/Radarr/Lidarr/Prowlarr; Readarr still disabled
+until its Goodreads upstream is operational). Code-complete
+catalogue now covers: cross-app observability (health/diskspace),
+add-media prerequisites (list_quality_profiles, list_root_folders,
+list_metadata_profiles for Lidarr/Readarr), wanted/missing +
+wanted/cutoff queries, full command-trigger surface (16 tools),
+add-media for the four media apps,
+`<app>_queue_remove` + `<app>_queue_regrab` for the four media
+apps, and `<app>_history_mark_failed` for the four media apps.
+All queue + history resources extracted into per-app sibling files
+(`queue.ts`, `history.ts`) per the per-resource splitting rule.
+Same-host hostname trap fixed early
 (`extra_hosts: host.docker.internal:host-gateway` in compose, env
 URLs use `http://host.docker.internal:<port>`). Deploy git-managed
 Portainer stack id 148.
@@ -324,21 +325,38 @@ per-app `tools/<app>/queue.ts` sibling alongside the two writes —
 keeps the queue resource family in one place per the
 per-resource splitting rule.
 
+## Done (write tools — history_mark_failed)
+
+- **`<app>_history_mark_failed`** — `POST /history/failed/{id}`.
+  Tells the *arr the imported file was wrong, prompting a
+  re-search on the next interval. Skipped for Prowlarr (no
+  download history; it's a search proxy).
+- New plumbing on `ServarrClient` base:
+  - `requestPostVoid(path, body)` helper, symmetric with
+    `requestDelete` — for POSTs that mutate state and return no
+    body, so we don't try to parse empty JSON.
+  - `markHistoryFailed(id)` method.
+- New per-app `tools/<app>/history.ts` siblings holding the
+  existing `<app>_history` (read) and the new write tool together.
+- Smoke-tested with a non-existent history id (99999999) — Sonarr,
+  Radarr, Lidarr each returned the expected `404 NotFound` with
+  app-specific `ModelNotFoundException` messages
+  (`EpisodeHistory` / `MovieHistory` / `EntityHistory`).
+  Plumbing validated without touching real history.
+
 ## Next
 
-1. **`<app>_history_mark_failed`** — `POST /history/failed/{id}`.
-   Medium risk; marks a history entry failed and triggers a
-   re-search. Likely a new `history.ts` sibling (currently
-   `<app>_history` is in `index.ts`).
-2. **`<app>_edit_<resource>`** — `PUT /<resource>/{id}`. Per docs,
+1. **`<app>_edit_<resource>`** — `PUT /<resource>/{id}`. Per docs,
    the API requires the full resource body (sparse → 400). Pattern:
-   GET → mutate field(s) → PUT. Higher complexity; designs needed
-   per app.
-3. **`<app>_grab_release`** — `POST /release`. High risk: bypasses
+   GET → mutate field(s) → PUT. Higher complexity; per-app design
+   needed (toggle monitor, change quality profile, change root
+   folder, change metadata profile for Lidarr/Readarr). Possibly
+   also `radarr_edit_collection` (collection-level monitoring).
+2. **`<app>_grab_release`** — `POST /release`. High risk: bypasses
    normal indexer-pick logic. Defer until a `release_search` read
    tool ships first so the LLM has candidate releases to choose
    from.
-4. **Add tests** once a real Servarr test target is set up (don't
+3. **Add tests** once a real Servarr test target is set up (don't
    mock).
 
 ## Open Decisions
