@@ -17,6 +17,10 @@ export class RadarrClient extends ServarrClient {
     return this.request("/movie/lookup", { term });
   }
 
+  async addMovie(body: unknown): Promise<unknown> {
+    return this.requestPost("/movie", body);
+  }
+
   async calendar(start?: string, end?: string): Promise<unknown> {
     const params: Record<string, string> = {};
     if (start) params.start = start;
