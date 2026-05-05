@@ -4,21 +4,21 @@
 
 ## Phase
 
-Add-media phase complete. **58 tools live on the NAS deploy** with
-Sonarr/Radarr/Lidarr/Prowlarr enabled (Readarr dropped from the
-deploy until its upstream metadata source is operational — see
-"Readarr disabled" below). Three of four add-media write tools
-smoke-tested end-to-end (`sonarr_add_series`, `radarr_add_movie`,
-`lidarr_add_artist` all returned the expected
-`<App>ExistsValidator` 400s on existing ids). Code-complete tool
-catalogue covers: cross-app observability (health/diskspace),
-add-media prerequisites (list_quality_profiles, list_root_folders,
-list_metadata_profiles for Lidarr/Readarr), wanted/missing +
-wanted/cutoff queries, full command-trigger surface (16 tools),
-and add-media for the four media apps. Same-host hostname trap
-fixed early in this phase (`extra_hosts: host.docker.internal:host-gateway`
-in compose, env URLs use `host.docker.internal:<port>`). Deploy
-git-managed Portainer stack id 148.
+Queue-manipulation surface added on top of the add-media phase.
+**61 tools live on the NAS deploy** (Sonarr/Radarr/Lidarr/Prowlarr;
+Readarr still disabled until its Goodreads upstream is operational).
+Code-complete catalogue now covers: cross-app observability
+(health/diskspace), add-media prerequisites
+(list_quality_profiles, list_root_folders, list_metadata_profiles
+for Lidarr/Readarr), wanted/missing + wanted/cutoff queries, full
+command-trigger surface (16 tools), add-media for the four media
+apps, and `<app>_queue_remove` for the four media apps. All four
+queue resources extracted into per-app `tools/<app>/queue.ts`
+siblings (read + write together) per the per-resource splitting
+rule. Same-host hostname trap fixed early
+(`extra_hosts: host.docker.internal:host-gateway` in compose, env
+URLs use `host.docker.internal:<port>`). Deploy git-managed
+Portainer stack id 148.
 
 ## Done
 
@@ -301,16 +301,45 @@ two env vars in Portainer. The code is still in `src/clients/readarr.ts`
 identical to the three verified ones and should work once upstream
 is operational.
 
+## Done (write tools — queue_remove)
+
+- **`<app>_queue_remove`** registered for Sonarr, Radarr, Lidarr,
+  Readarr (Readarr's not running on the deploy due to the disabled
+  app, but the code is live).
+- New `requestDelete<T>(path, params)` helper on `ServarrClient`
+  base; new `queueRemove(id, opts)` method that builds the four
+  query flags and calls it.
+- All four flags surfaced explicitly per `SERVARR-API.md`'s
+  guidance (the server-side defaults are not obviously safe — in
+  particular, `removeFromClient` defaults to `true` server-side,
+  deleting the file). Tool defaults all four to `false` — caller
+  has to opt-in to destructive behaviour.
+- New `tools/<app>/queue.ts` sibling per app, holding the existing
+  `<app>_queue` read tool plus the new write tool together — same
+  resource-family pattern as `wanted.ts`, `commands.ts`, etc.
+- Smoke-tested with a non-existent queue id (99999999) — Sonarr,
+  Radarr, Lidarr each returned the expected
+  `404 NotFound` from the DELETE endpoint. Validates the plumbing
+  without touching real downloads.
+
 ## Next
 
-1. **Add tests** once a real Servarr test target is set up (don't
+1. **`<app>_queue_regrab`** — `POST /queue/grab/{id}`. Low risk;
+   forces a re-grab of a stuck queue item. Fits naturally in
+   `queue.ts`.
+2. **`<app>_history_mark_failed`** — `POST /history/failed/{id}`.
+   Medium risk; marks a history entry failed and triggers a
+   re-search. Likely a new `history.ts` sibling.
+3. **`<app>_edit_<resource>`** — `PUT /<resource>/{id}`. Per docs,
+   the API requires the full resource body (sparse → 400). Pattern:
+   GET → mutate field(s) → PUT. Higher complexity; designs needed
+   per app.
+4. **`<app>_grab_release`** — `POST /release`. High risk: bypasses
+   normal indexer-pick logic. Defer until a `release_search` read
+   tool ships first so the LLM has candidate releases to choose
+   from.
+5. **Add tests** once a real Servarr test target is set up (don't
    mock).
-2. **Doc tidy** — drop the "verify exact name" caveats from per-app
-   doc tables for the sixteen command names confirmed in this
-   session.
-3. **Future write tools** beyond add-media: queue manipulation
-   (`<app>_queue_remove`), release-grab (`<app>_grab_release`),
-   edit-media (`<app>_edit_<resource>`).
 
 ## Open Decisions
 
