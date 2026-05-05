@@ -126,6 +126,10 @@ export class ServarrClient {
     await this.requestDelete(`/queue/${id}`, params);
   }
 
+  async queueRegrab(id: number): Promise<unknown> {
+    return this.requestPost(`/queue/grab/${id}`, {});
+  }
+
   async history(pageSize = 20): Promise<unknown> {
     return this.request("/history", {
       pageSize,

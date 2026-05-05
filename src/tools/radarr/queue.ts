@@ -71,4 +71,20 @@ export function registerQueueTools(
       return asText({ removed: true, id, options: opts });
     },
   );
+
+  server.registerTool(
+    "radarr_queue_regrab",
+    {
+      title: "Radarr: Re-grab Queue Item",
+      description:
+        "Force Radarr to re-grab a stuck queue item from the indexer. Useful when a download is hung or the file is corrupt. Returns the updated queue entry.",
+      inputSchema: {
+        id: z
+          .number()
+          .int()
+          .describe("The Radarr queue item id (from radarr_queue)."),
+      },
+    },
+    async ({ id }) => asText(await radarr.queueRegrab(id)),
+  );
 }

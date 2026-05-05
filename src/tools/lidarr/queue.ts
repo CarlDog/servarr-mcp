@@ -71,4 +71,20 @@ export function registerQueueTools(
       return asText({ removed: true, id, options: opts });
     },
   );
+
+  server.registerTool(
+    "lidarr_queue_regrab",
+    {
+      title: "Lidarr: Re-grab Queue Item",
+      description:
+        "Force Lidarr to re-grab a stuck queue item from the indexer. Useful when a download is hung or the file is corrupt. Returns the updated queue entry.",
+      inputSchema: {
+        id: z
+          .number()
+          .int()
+          .describe("The Lidarr queue item id (from lidarr_queue)."),
+      },
+    },
+    async ({ id }) => asText(await lidarr.queueRegrab(id)),
+  );
 }
