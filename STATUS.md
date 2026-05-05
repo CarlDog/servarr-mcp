@@ -4,19 +4,20 @@
 
 ## Phase
 
-Queue + history write surface complete. **67 tools live on the NAS
-deploy** (Sonarr/Radarr/Lidarr/Prowlarr; Readarr still disabled
-until its Goodreads upstream is operational). Code-complete
-catalogue now covers: cross-app observability (health/diskspace),
-add-media prerequisites (list_quality_profiles, list_root_folders,
-list_metadata_profiles for Lidarr/Readarr), wanted/missing +
-wanted/cutoff queries, full command-trigger surface (16 tools),
-add-media for the four media apps,
-`<app>_queue_remove` + `<app>_queue_regrab` for the four media
-apps, and `<app>_history_mark_failed` for the four media apps.
-All queue + history resources extracted into per-app sibling files
-(`queue.ts`, `history.ts`) per the per-resource splitting rule.
-Same-host hostname trap fixed early
+Edit-media added on top of the queue + history write surface.
+**70 tools live on the NAS deploy** (Sonarr/Radarr/Lidarr/Prowlarr;
+Readarr still disabled until its Goodreads upstream is operational).
+Code-complete catalogue now covers: cross-app observability
+(health/diskspace), add-media prerequisites (list_quality_profiles,
+list_root_folders, list_metadata_profiles for Lidarr/Readarr),
+wanted/missing + wanted/cutoff queries, full command-trigger surface
+(16 tools), add-media for the four media apps,
+`<app>_queue_remove` + `<app>_queue_regrab` for the four media apps,
+`<app>_history_mark_failed` for the four media apps, and
+`<app>_edit_<resource>` for the four media apps. Per-resource
+sibling files: `queue.ts`, `history.ts`, plus the existing
+`series.ts`/`movies.ts`/`artists.ts`/`authors.ts` (which now hold
+add + edit). Same-host hostname trap fixed early
 (`extra_hosts: host.docker.internal:host-gateway` in compose, env
 URLs use `http://host.docker.internal:<port>`). Deploy git-managed
 Portainer stack id 148.
@@ -344,20 +345,51 @@ per-resource splitting rule.
   (`EpisodeHistory` / `MovieHistory` / `EntityHistory`).
   Plumbing validated without touching real history.
 
+## Done (write tools — edit-media)
+
+All four media apps got their edit tool. Same GET → mutate → PUT
+pattern across the board, since Servarr requires the full resource
+body on PUT (sparse → 400 per docs).
+
+| Tool | Editable fields |
+| --- | --- |
+| `sonarr_edit_series` | monitored, quality_profile_id, root_folder_path, season_folder, tags |
+| `radarr_edit_movie` | monitored, quality_profile_id, root_folder_path, minimum_availability, tags |
+| `lidarr_edit_artist` | monitored, quality_profile_id, metadata_profile_id, root_folder_path, tags |
+| `readarr_edit_author` | monitored, quality_profile_id, metadata_profile_id, root_folder_path, tags |
+
+All inputs except `id` are optional — the tool fetches the current
+resource, applies only the fields the caller passed, and PUTs the
+full body. `tags` is a full-list replacement (Servarr API doesn't
+have append semantics). `root_folder_path` change moves files on
+disk — flagged in every tool description.
+
+Plumbing on `ServarrClient` base: new `requestPut<T>(path, body)`
+helper. Per-app `edit<Resource>(id, body)` wraps it. Tools live in
+the existing per-resource siblings (`series.ts`, `movies.ts`,
+`artists.ts`, `authors.ts`) alongside their add tools.
+
+Smoke-tested with the round-trip-without-changes pattern: pass just
+the id, no other fields → tool merges nothing → PUT returns the
+unchanged resource. Sonarr/Radarr/Lidarr all returned the original
+title + monitored state intact. Readarr's ships but is disabled on
+the deploy.
+
 ## Next
 
-1. **`<app>_edit_<resource>`** — `PUT /<resource>/{id}`. Per docs,
-   the API requires the full resource body (sparse → 400). Pattern:
-   GET → mutate field(s) → PUT. Higher complexity; per-app design
-   needed (toggle monitor, change quality profile, change root
-   folder, change metadata profile for Lidarr/Readarr). Possibly
-   also `radarr_edit_collection` (collection-level monitoring).
-2. **`<app>_grab_release`** — `POST /release`. High risk: bypasses
+1. **`<app>_grab_release`** — `POST /release`. High risk: bypasses
    normal indexer-pick logic. Defer until a `release_search` read
    tool ships first so the LLM has candidate releases to choose
    from.
+2. **`release_search`** read tool — `GET /release?<filters>` —
+   prerequisite for grab_release. Returns candidate releases for
+   manual grab.
 3. **Add tests** once a real Servarr test target is set up (don't
    mock).
+4. **Optional later additions**: `radarr_edit_collection`
+   (collection-level monitoring, Radarr-specific),
+   `lidarr_monitor_albums` / `readarr_monitor_books` (bulk monitor
+   toggles), per-season/episode monitor tools for Sonarr.
 
 ## Open Decisions
 
