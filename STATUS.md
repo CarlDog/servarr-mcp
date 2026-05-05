@@ -4,20 +4,20 @@
 
 ## Phase
 
-Queue-manipulation surface added on top of the add-media phase.
-**61 tools live on the NAS deploy** (Sonarr/Radarr/Lidarr/Prowlarr;
+Queue-manipulation surface complete (remove + regrab).
+**64 tools live on the NAS deploy** (Sonarr/Radarr/Lidarr/Prowlarr;
 Readarr still disabled until its Goodreads upstream is operational).
 Code-complete catalogue now covers: cross-app observability
 (health/diskspace), add-media prerequisites
 (list_quality_profiles, list_root_folders, list_metadata_profiles
 for Lidarr/Readarr), wanted/missing + wanted/cutoff queries, full
 command-trigger surface (16 tools), add-media for the four media
-apps, and `<app>_queue_remove` for the four media apps. All four
-queue resources extracted into per-app `tools/<app>/queue.ts`
-siblings (read + write together) per the per-resource splitting
-rule. Same-host hostname trap fixed early
+apps, and `<app>_queue_remove` + `<app>_queue_regrab` for the four
+media apps. All four queue resources extracted into per-app
+`tools/<app>/queue.ts` siblings (read + write together) per the
+per-resource splitting rule. Same-host hostname trap fixed early
 (`extra_hosts: host.docker.internal:host-gateway` in compose, env
-URLs use `host.docker.internal:<port>`). Deploy git-managed
+URLs use `http://host.docker.internal:<port>`). Deploy git-managed
 Portainer stack id 148.
 
 ## Done
@@ -301,44 +301,44 @@ two env vars in Portainer. The code is still in `src/clients/readarr.ts`
 identical to the three verified ones and should work once upstream
 is operational.
 
-## Done (write tools — queue_remove)
+## Done (write tools — queue manipulation)
 
-- **`<app>_queue_remove`** registered for Sonarr, Radarr, Lidarr,
-  Readarr (Readarr's not running on the deploy due to the disabled
-  app, but the code is live).
-- New `requestDelete<T>(path, params)` helper on `ServarrClient`
-  base; new `queueRemove(id, opts)` method that builds the four
-  query flags and calls it.
-- All four flags surfaced explicitly per `SERVARR-API.md`'s
-  guidance (the server-side defaults are not obviously safe — in
-  particular, `removeFromClient` defaults to `true` server-side,
-  deleting the file). Tool defaults all four to `false` — caller
-  has to opt-in to destructive behaviour.
-- New `tools/<app>/queue.ts` sibling per app, holding the existing
-  `<app>_queue` read tool plus the new write tool together — same
-  resource-family pattern as `wanted.ts`, `commands.ts`, etc.
-- Smoke-tested with a non-existent queue id (99999999) — Sonarr,
-  Radarr, Lidarr each returned the expected
-  `404 NotFound` from the DELETE endpoint. Validates the plumbing
-  without touching real downloads.
+Two write tools shipped on the queue resource family:
+
+- **`<app>_queue_remove`** — `DELETE /queue/{id}` with all four
+  cross-cutting flags surfaced explicitly (`remove_from_client`,
+  `blocklist`, `skip_redownload`, `change_category`). All defaults
+  flipped to `false` to neutralise Servarr's destructive
+  `removeFromClient=true` server-side default. Smoke-tested with
+  a non-existent id → 404 NotFound across Sonarr/Radarr/Lidarr.
+- **`<app>_queue_regrab`** — `POST /queue/grab/{id}`. Low risk;
+  forces a re-grab of a stuck queue item. Smoke-tested same way →
+  404 NotFound across the three enabled apps.
+
+Plumbing on `ServarrClient` base: `requestDelete(path, params)` for
+the DELETE shape, `queueRemove(id, opts)` builds the four flags,
+`queueRegrab(id)` is a thin wrapper over the existing `requestPost`.
+
+The `<app>_queue` read tool migrated from `index.ts` into the new
+per-app `tools/<app>/queue.ts` sibling alongside the two writes —
+keeps the queue resource family in one place per the
+per-resource splitting rule.
 
 ## Next
 
-1. **`<app>_queue_regrab`** — `POST /queue/grab/{id}`. Low risk;
-   forces a re-grab of a stuck queue item. Fits naturally in
-   `queue.ts`.
-2. **`<app>_history_mark_failed`** — `POST /history/failed/{id}`.
+1. **`<app>_history_mark_failed`** — `POST /history/failed/{id}`.
    Medium risk; marks a history entry failed and triggers a
-   re-search. Likely a new `history.ts` sibling.
-3. **`<app>_edit_<resource>`** — `PUT /<resource>/{id}`. Per docs,
+   re-search. Likely a new `history.ts` sibling (currently
+   `<app>_history` is in `index.ts`).
+2. **`<app>_edit_<resource>`** — `PUT /<resource>/{id}`. Per docs,
    the API requires the full resource body (sparse → 400). Pattern:
    GET → mutate field(s) → PUT. Higher complexity; designs needed
    per app.
-4. **`<app>_grab_release`** — `POST /release`. High risk: bypasses
+3. **`<app>_grab_release`** — `POST /release`. High risk: bypasses
    normal indexer-pick logic. Defer until a `release_search` read
    tool ships first so the LLM has candidate releases to choose
    from.
-5. **Add tests** once a real Servarr test target is set up (don't
+4. **Add tests** once a real Servarr test target is set up (don't
    mock).
 
 ## Open Decisions
