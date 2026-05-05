@@ -156,7 +156,7 @@ since the LLM has to choose ids.
 | `readarr_search_author`    | `POST /command` (`name: "AuthorSearch"`) | Low      | Trigger a full-author search.                                      |
 | `readarr_search_missing`   | `POST /command` (`name: "MissingBookSearch"`) | Low | Search across all monitored, missing books.                        |
 | `readarr_refresh_author`   | `POST /command` (`name: "RefreshAuthor"`) | Low     | Re-pull metadata for an author.                                    |
-| `readarr_get_command`      | `GET /command/{id}`                   | Low        | Companion poll for any of the above. Command names above are inferred from Servarr conventions — **verify against the Readarr source before shipping** (the spec doesn't enumerate them). |
+| `readarr_get_command`      | `GET /command/{id}`                   | Low        | Companion poll for any of the above. The four command names above (`BookSearch`, `AuthorSearch`, `MissingBookSearch`, `RefreshAuthor`) are verified live; the spec doesn't enumerate command names so any new ones added here should be confirmed by test call. |
 | `readarr_grab_release`     | `POST /release` (body: `ReleaseResource`) | High   | Grab a specific release returned by `release_search`. Defer until release_search ships. |
 | `readarr_queue_remove`     | `DELETE /queue/{id}?removeFromClient=&blocklist=` | Medium | Single item only; no bulk.                                |
 | `readarr_queue_regrab`     | `POST /queue/grab/{id}`               | Low        | Force re-grab of a stuck queue item.                               |

@@ -169,7 +169,7 @@ since the LLM has to choose ids.
 | `lidarr_add_album`            | `POST /album` (body: `AlbumResource`)   | Medium   | For adding a one-off album when you don't want the full artist back-catalogue. Must come from `lookup_album`. |
 | `lidarr_edit_artist`          | `PUT /artist/{id}`                    | Medium     | Toggle monitor, change quality profile, change metadata profile, change root folder. Single-artist. |
 | `lidarr_monitor_albums`       | `PUT /album/monitor` (body: `AlbumsMonitoredResource`) | Low | Bulk monitor toggle by album ids — common workflow. |
-| `lidarr_search_artist`        | `POST /command` (`name: "ArtistSearch"`) | Low      | Trigger a full-artist search. Verify the exact command name against Lidarr source — the spec doesn't enumerate. |
+| `lidarr_search_artist`        | `POST /command` (`name: "ArtistSearch"`) | Low      | Trigger a full-artist search. Command name verified live. |
 | `lidarr_search_album`         | `POST /command` (`name: "AlbumSearch"`) | Low      | Trigger an album search.                                           |
 | `lidarr_refresh_artist`       | `POST /command` (`name: "RefreshArtist"`) | Low    | Re-pull metadata from MusicBrainz.                                 |
 | `lidarr_search_missing`       | `POST /command` (`name: "MissingAlbumSearch"`) | Low | Search across all monitored, missing albums.                       |
