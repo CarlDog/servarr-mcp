@@ -240,38 +240,44 @@ single id; leaf resources (episode/movie/album/book) take an array.
 
 Live tool count: **70** (54 read + 16 command-trigger write).
 
-## Done (write tools — sonarr_add_series MVP)
+## Done (write tools — add-media for Sonarr + Radarr)
 
-- **`sonarr_add_series`** registered (new
-  `src/tools/sonarr/series.ts` sibling per the resource-family
-  splitting rule). Tool inputs: `tvdb_id`, `quality_profile_id`,
-  `root_folder_path`, plus optional `monitored`, `season_folder`,
-  `monitor` enum, `search_for_missing_episodes`.
-- Tool internally calls `sonarr.lookupSeries("tvdb:<id>")` to fetch
-  the full SeriesResource, merges in user choices + `addOptions`,
-  then POSTs `/series` via the new
-  `SonarrClient.addSeries(body)` (wraps base `requestPost`).
-- Safe defaults: `monitored=true`, `season_folder=true`,
-  `monitor="all"`, `search_for_missing_episodes=false` (flips
-  Sonarr's server-side default of true to avoid surprise indexer
-  hits on add).
-- Smoke-tested with an existing series's TVDB id — Sonarr returned
-  the expected `SeriesExistsValidator` 400 ("This series has
-  already been added"), confirming the lookup-merge-POST flow works
-  end-to-end.
+Same lookup-merge-POST pattern in both:
+
+| Tool | Foreign id | Lookup prefix | addOptions key | Monitor enum |
+| --- | --- | --- | --- | --- |
+| `sonarr_add_series` | `tvdb_id` | `tvdb:<id>` | `searchForMissingEpisodes` | yes (all/future/missing/...) |
+| `radarr_add_movie` | `tmdb_id` | `tmdb:<id>` | `searchForMovie` | no (movies are single units) |
+
+- New per-app tool sibling files: `src/tools/sonarr/series.ts` and
+  `src/tools/radarr/movies.ts`. Each exports a
+  `register<Resource>Tools(server, client)` called from the app's
+  `index.ts` after the existing `registerCommandTools`.
+- New `addSeries(body)` on `SonarrClient` and `addMovie(body)` on
+  `RadarrClient`, both wrapping the base `requestPost` helper.
+- Safe defaults match across both: `monitored=true`, search-on-add
+  `false` (flips the unsafe server-side default of `true`).
+- Both smoke-tested by re-adding an already-tracked id — got back
+  the expected `SeriesExistsValidator` / `MovieExistsValidator`
+  400s, confirming the plumbing works end-to-end.
+
+Live tool count: **72** (54 read + 16 command-trigger + 2 add-media).
 
 ## Next
 
-1. **`radarr_add_movie`** — mirror sonarr_add_series. Different
-   foreign id (`tmdb_id`), different addOptions key
-   (`searchForMovie`), different monitor enum. Per radarr.md
-   gotchas: addOptions needs explicit zod inputs.
-2. **`<app>_list_metadata_profiles`** read tool for Lidarr +
+1. **`<app>_list_metadata_profiles`** read tool for Lidarr +
    Readarr — prerequisite for their add-media tools (POST /artist
    and POST /author require `metadataProfileId` in addition to
-   `qualityProfileId`).
-3. **`lidarr_add_artist`** and **`readarr_add_author`** — once the
-   metadata-profiles read tool ships.
+   `qualityProfileId`). Endpoint is `/metadataprofile`, uniform
+   across both. Method goes on `ServarrClient` base alongside
+   `qualityProfiles()`.
+2. **`lidarr_add_artist`** — same lookup-merge-POST pattern. Foreign
+   id `foreign_artist_id`, lookup prefix likely `lidarr:<mbid>` or
+   uses the artist lookup endpoint with `term`. Body needs both
+   `qualityProfileId` and `metadataProfileId`.
+3. **`readarr_add_author`** — same pattern; body needs both profile
+   ids. Add-options include `searchForMissingBooks` and a `monitor`
+   enum (per readarr.md).
 4. **Add tests** once a real Servarr test target is set up (don't
    mock).
 5. **Doc tidy** — drop the "verify exact name" caveats from per-app
