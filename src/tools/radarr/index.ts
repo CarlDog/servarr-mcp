@@ -3,6 +3,7 @@ import { z } from "zod";
 import { asText } from "../../clients/base.js";
 import type { RadarrClient } from "../../clients/radarr.js";
 import { registerCommandTools } from "./commands.js";
+import { registerHistoryTools } from "./history.js";
 import { registerMovieTools } from "./movies.js";
 import { registerQueueTools } from "./queue.js";
 import { registerWantedTools } from "./wanted.js";
@@ -54,23 +55,6 @@ export function registerRadarrTools(
     async ({ start, end }) => asText(await radarr.calendar(start, end)),
   );
 
-  server.registerTool(
-    "radarr_history",
-    {
-      title: "Radarr: History",
-      description: "Get recent Radarr history (newest first).",
-      inputSchema: {
-        page_size: z
-          .number()
-          .int()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe("Records to return (default 20)"),
-      },
-    },
-    async ({ page_size }) => asText(await radarr.history(page_size)),
-  );
 
   server.registerTool(
     "radarr_health",
@@ -117,6 +101,7 @@ export function registerRadarrTools(
   );
 
   registerQueueTools(server, radarr);
+  registerHistoryTools(server, radarr);
   registerWantedTools(server, radarr);
   registerCommandTools(server, radarr);
   registerMovieTools(server, radarr);

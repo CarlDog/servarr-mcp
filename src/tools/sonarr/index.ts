@@ -3,6 +3,7 @@ import { z } from "zod";
 import { asText } from "../../clients/base.js";
 import type { SonarrClient } from "../../clients/sonarr.js";
 import { registerCommandTools } from "./commands.js";
+import { registerHistoryTools } from "./history.js";
 import { registerQueueTools } from "./queue.js";
 import { registerSeriesTools } from "./series.js";
 import { registerWantedTools } from "./wanted.js";
@@ -67,24 +68,6 @@ export function registerSonarrTools(
   );
 
   server.registerTool(
-    "sonarr_history",
-    {
-      title: "Sonarr: History",
-      description: "Get recent Sonarr history (newest first).",
-      inputSchema: {
-        page_size: z
-          .number()
-          .int()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe("Records to return (default 20)"),
-      },
-    },
-    async ({ page_size }) => asText(await sonarr.history(page_size)),
-  );
-
-  server.registerTool(
     "sonarr_health",
     {
       title: "Sonarr: Health",
@@ -129,6 +112,7 @@ export function registerSonarrTools(
   );
 
   registerQueueTools(server, sonarr);
+  registerHistoryTools(server, sonarr);
   registerWantedTools(server, sonarr);
   registerCommandTools(server, sonarr);
   registerSeriesTools(server, sonarr);

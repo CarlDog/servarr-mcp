@@ -4,6 +4,7 @@ import { asText } from "../../clients/base.js";
 import type { LidarrClient } from "../../clients/lidarr.js";
 import { registerArtistTools } from "./artists.js";
 import { registerCommandTools } from "./commands.js";
+import { registerHistoryTools } from "./history.js";
 import { registerQueueTools } from "./queue.js";
 import { registerWantedTools } from "./wanted.js";
 
@@ -58,23 +59,6 @@ export function registerLidarrTools(
     async ({ artist_id }) => asText(await lidarr.listAlbums(artist_id)),
   );
 
-  server.registerTool(
-    "lidarr_history",
-    {
-      title: "Lidarr: History",
-      description: "Get recent Lidarr history (newest first).",
-      inputSchema: {
-        page_size: z
-          .number()
-          .int()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe("Records to return (default 20)"),
-      },
-    },
-    async ({ page_size }) => asText(await lidarr.history(page_size)),
-  );
 
   server.registerTool(
     "lidarr_health",
@@ -132,6 +116,7 @@ export function registerLidarrTools(
   );
 
   registerQueueTools(server, lidarr);
+  registerHistoryTools(server, lidarr);
   registerWantedTools(server, lidarr);
   registerCommandTools(server, lidarr);
   registerArtistTools(server, lidarr);
