@@ -3,6 +3,7 @@ import { z } from "zod";
 import { asText } from "../../clients/base.js";
 import type { SonarrClient } from "../../clients/sonarr.js";
 import { registerCommandTools } from "./commands.js";
+import { registerQueueTools } from "./queue.js";
 import { registerSeriesTools } from "./series.js";
 import { registerWantedTools } from "./wanted.js";
 
@@ -63,16 +64,6 @@ export function registerSonarrTools(
       },
     },
     async ({ start, end }) => asText(await sonarr.calendar(start, end)),
-  );
-
-  server.registerTool(
-    "sonarr_queue",
-    {
-      title: "Sonarr: Queue",
-      description: "Get the current Sonarr download queue.",
-      inputSchema: {},
-    },
-    async () => asText(await sonarr.queue()),
   );
 
   server.registerTool(
@@ -137,6 +128,7 @@ export function registerSonarrTools(
     async () => asText(await sonarr.rootFolders()),
   );
 
+  registerQueueTools(server, sonarr);
   registerWantedTools(server, sonarr);
   registerCommandTools(server, sonarr);
   registerSeriesTools(server, sonarr);

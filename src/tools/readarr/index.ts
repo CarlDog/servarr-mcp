@@ -4,6 +4,7 @@ import { asText } from "../../clients/base.js";
 import type { ReadarrClient } from "../../clients/readarr.js";
 import { registerAuthorTools } from "./authors.js";
 import { registerCommandTools } from "./commands.js";
+import { registerQueueTools } from "./queue.js";
 import { registerWantedTools } from "./wanted.js";
 
 export function registerReadarrTools(
@@ -55,16 +56,6 @@ export function registerReadarrTools(
       },
     },
     async ({ author_id }) => asText(await readarr.listBooks(author_id)),
-  );
-
-  server.registerTool(
-    "readarr_queue",
-    {
-      title: "Readarr: Queue",
-      description: "Get the current Readarr download queue.",
-      inputSchema: {},
-    },
-    async () => asText(await readarr.queue()),
   );
 
   server.registerTool(
@@ -140,6 +131,7 @@ export function registerReadarrTools(
     async () => asText(await readarr.rootFolders()),
   );
 
+  registerQueueTools(server, readarr);
   registerWantedTools(server, readarr);
   registerCommandTools(server, readarr);
   registerAuthorTools(server, readarr);

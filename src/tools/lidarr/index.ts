@@ -4,6 +4,7 @@ import { asText } from "../../clients/base.js";
 import type { LidarrClient } from "../../clients/lidarr.js";
 import { registerArtistTools } from "./artists.js";
 import { registerCommandTools } from "./commands.js";
+import { registerQueueTools } from "./queue.js";
 import { registerWantedTools } from "./wanted.js";
 
 export function registerLidarrTools(
@@ -55,16 +56,6 @@ export function registerLidarrTools(
       },
     },
     async ({ artist_id }) => asText(await lidarr.listAlbums(artist_id)),
-  );
-
-  server.registerTool(
-    "lidarr_queue",
-    {
-      title: "Lidarr: Queue",
-      description: "Get the current Lidarr download queue.",
-      inputSchema: {},
-    },
-    async () => asText(await lidarr.queue()),
   );
 
   server.registerTool(
@@ -140,6 +131,7 @@ export function registerLidarrTools(
     async () => asText(await lidarr.rootFolders()),
   );
 
+  registerQueueTools(server, lidarr);
   registerWantedTools(server, lidarr);
   registerCommandTools(server, lidarr);
   registerArtistTools(server, lidarr);
