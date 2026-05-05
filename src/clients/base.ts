@@ -51,6 +51,26 @@ export class ServarrClient {
     return (await res.json()) as T;
   }
 
+  protected async requestPut<T>(path: string, body: unknown): Promise<T> {
+    const url = new URL(this.config.apiPath + path, this.config.url);
+    const res = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "X-Api-Key": this.config.apiKey,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(
+        `${this.config.appName} ${res.status} ${res.statusText} for ${path}: ${text.slice(0, 200)}`,
+      );
+    }
+    return (await res.json()) as T;
+  }
+
   protected async requestPostVoid(path: string, body: unknown): Promise<void> {
     const url = new URL(this.config.apiPath + path, this.config.url);
     const res = await fetch(url, {
