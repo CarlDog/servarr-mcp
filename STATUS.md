@@ -240,49 +240,68 @@ single id; leaf resources (episode/movie/album/book) take an array.
 
 Live tool count: **70** (54 read + 16 command-trigger write).
 
-## Done (write tools — add-media for Sonarr + Radarr)
+## Done (write tools — add-media, four apps)
 
-Same lookup-merge-POST pattern in both:
+Same lookup-merge-POST pattern across all four media apps:
 
-| Tool | Foreign id | Lookup prefix | addOptions key | Monitor enum |
-| --- | --- | --- | --- | --- |
-| `sonarr_add_series` | `tvdb_id` | `tvdb:<id>` | `searchForMissingEpisodes` | yes (all/future/missing/...) |
-| `radarr_add_movie` | `tmdb_id` | `tmdb:<id>` | `searchForMovie` | no (movies are single units) |
+| Tool | Foreign id | Lookup prefix | addOptions key | Monitor enum | Smoke-test |
+| --- | --- | --- | --- | --- | --- |
+| `sonarr_add_series` | `tvdb_id` (int) | `tvdb:<id>` | `searchForMissingEpisodes` | yes | ✅ `SeriesExistsValidator` 400 |
+| `radarr_add_movie` | `tmdb_id` (int) | `tmdb:<id>` | `searchForMovie` | no | ✅ `MovieExistsValidator` 400 |
+| `lidarr_add_artist` | `foreign_artist_id` (MBID UUID) | `lidarr:<mbid>` | `searchForMissingAlbums` | yes | ✅ `ArtistExistsValidator` 400 |
+| `readarr_add_author` | `foreign_author_id` (Goodreads id) | `readarr:<id>` (best guess) | `searchForMissingBooks` | yes | ⚠️ blocked — see below |
 
-- New per-app tool sibling files: `src/tools/sonarr/series.ts` and
-  `src/tools/radarr/movies.ts`. Each exports a
-  `register<Resource>Tools(server, client)` called from the app's
-  `index.ts` after the existing `registerCommandTools`.
-- New `addSeries(body)` on `SonarrClient` and `addMovie(body)` on
-  `RadarrClient`, both wrapping the base `requestPost` helper.
-- Safe defaults match across both: `monitored=true`, search-on-add
-  `false` (flips the unsafe server-side default of `true`).
-- Both smoke-tested by re-adding an already-tracked id — got back
-  the expected `SeriesExistsValidator` / `MovieExistsValidator`
-  400s, confirming the plumbing works end-to-end.
+Lidarr/Readarr also need `metadataProfileId` (Sonarr/Radarr don't —
+Sonarr uses language profiles, Radarr nests language inside quality
+profiles). Shipped `<app>_list_metadata_profiles` read tools for
+Lidarr + Readarr; method on `ServarrClient` base alongside
+`qualityProfiles()`.
 
-Live tool count: **72** (54 read + 16 command-trigger + 2 add-media).
+Per-app sibling files: `tools/sonarr/series.ts`,
+`tools/radarr/movies.ts`, `tools/lidarr/artists.ts`,
+`tools/readarr/authors.ts`. Each exports a
+`register<Resource>Tools(server, client)` called from the app's
+`index.ts`.
+
+Safe defaults are uniform: `monitored=true`, search-on-add `false`
+(flips the unsafe server-side default of `true` for all four).
+
+Live tool count: **78** (54 read + 16 command-trigger + 2 list-metadata-profiles + 4 add-media).
+
+## Known limitation — Readarr metadata source
+
+`readarr_lookup_author` (existing read tool) and `readarr_add_author`
+(new) both depend on Readarr's `/author/lookup` endpoint, which
+queries Goodreads upstream. **Goodreads' public API has been
+deprecated; Readarr returns 503 with
+`NzbDrone.Core.MetadataSource.Goodreads.GoodreadsException` for any
+lookup query — by name OR by foreign id.** This is a well-known
+*arr community issue, not a bug in our code.
+
+The tool code follows the same correct pattern as the three working
+add-media tools. It will start working as soon as Readarr's metadata
+source is operational (either Goodreads coming back, or Readarr
+migrating to OpenLibrary / a community fork). Smoke-test for
+`readarr_add_author` is deferred until that happens.
+
+`readarr_lookup_author` was already broken before this work — I
+flagged it during smoke-test rather than retrofitting, but you may
+want to drop the tool registration entirely until upstream is fixed
+(otherwise the LLM will keep trying it and getting 503s).
 
 ## Next
 
-1. **`<app>_list_metadata_profiles`** read tool for Lidarr +
-   Readarr — prerequisite for their add-media tools (POST /artist
-   and POST /author require `metadataProfileId` in addition to
-   `qualityProfileId`). Endpoint is `/metadataprofile`, uniform
-   across both. Method goes on `ServarrClient` base alongside
-   `qualityProfiles()`.
-2. **`lidarr_add_artist`** — same lookup-merge-POST pattern. Foreign
-   id `foreign_artist_id`, lookup prefix likely `lidarr:<mbid>` or
-   uses the artist lookup endpoint with `term`. Body needs both
-   `qualityProfileId` and `metadataProfileId`.
-3. **`readarr_add_author`** — same pattern; body needs both profile
-   ids. Add-options include `searchForMissingBooks` and a `monitor`
-   enum (per readarr.md).
-4. **Add tests** once a real Servarr test target is set up (don't
+1. **Decide on `readarr_lookup_author` / `readarr_add_author`** —
+   keep registered (returns 503), unregister until upstream is back,
+   or replace with a different metadata source.
+2. **Add tests** once a real Servarr test target is set up (don't
    mock).
-5. **Doc tidy** — drop the "verify exact name" caveats from per-app
+3. **Doc tidy** — drop the "verify exact name" caveats from per-app
    doc tables for the sixteen command names confirmed in this
    session.
+4. **Future write tools** beyond add-media: queue manipulation
+   (`<app>_queue_remove`), release-grab (`<app>_grab_release`),
+   edit-media (`<app>_edit_<resource>`).
 
 ## Open Decisions
 
