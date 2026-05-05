@@ -51,6 +51,27 @@ export class ServarrClient {
     return (await res.json()) as T;
   }
 
+  protected async requestPostVoid(path: string, body: unknown): Promise<void> {
+    const url = new URL(this.config.apiPath + path, this.config.url);
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "X-Api-Key": this.config.apiKey,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(
+        `${this.config.appName} ${res.status} ${res.statusText} for ${path}: ${text.slice(0, 200)}`,
+      );
+    }
+    // Servarr POSTs that mutate without returning a body (e.g.
+    // /history/failed/{id}). We deliberately don't parse the response.
+  }
+
   protected async requestDelete(
     path: string,
     params: Record<string, string | number | boolean> = {},
@@ -136,6 +157,10 @@ export class ServarrClient {
       sortKey: "date",
       sortDirection: "descending",
     });
+  }
+
+  async markHistoryFailed(id: number): Promise<void> {
+    await this.requestPostVoid(`/history/failed/${id}`, {});
   }
 
   async wantedMissing(pageSize = 20, monitored = true): Promise<unknown> {

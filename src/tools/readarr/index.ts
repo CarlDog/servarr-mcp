@@ -4,6 +4,7 @@ import { asText } from "../../clients/base.js";
 import type { ReadarrClient } from "../../clients/readarr.js";
 import { registerAuthorTools } from "./authors.js";
 import { registerCommandTools } from "./commands.js";
+import { registerHistoryTools } from "./history.js";
 import { registerQueueTools } from "./queue.js";
 import { registerWantedTools } from "./wanted.js";
 
@@ -58,23 +59,6 @@ export function registerReadarrTools(
     async ({ author_id }) => asText(await readarr.listBooks(author_id)),
   );
 
-  server.registerTool(
-    "readarr_history",
-    {
-      title: "Readarr: History",
-      description: "Get recent Readarr history (newest first).",
-      inputSchema: {
-        page_size: z
-          .number()
-          .int()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe("Records to return (default 20)"),
-      },
-    },
-    async ({ page_size }) => asText(await readarr.history(page_size)),
-  );
 
   server.registerTool(
     "readarr_health",
@@ -132,6 +116,7 @@ export function registerReadarrTools(
   );
 
   registerQueueTools(server, readarr);
+  registerHistoryTools(server, readarr);
   registerWantedTools(server, readarr);
   registerCommandTools(server, readarr);
   registerAuthorTools(server, readarr);
