@@ -71,4 +71,20 @@ export function registerQueueTools(
       return asText({ removed: true, id, options: opts });
     },
   );
+
+  server.registerTool(
+    "sonarr_queue_regrab",
+    {
+      title: "Sonarr: Re-grab Queue Item",
+      description:
+        "Force Sonarr to re-grab a stuck queue item from the indexer. Useful when a download is hung or the file is corrupt. Returns the updated queue entry.",
+      inputSchema: {
+        id: z
+          .number()
+          .int()
+          .describe("The Sonarr queue item id (from sonarr_queue)."),
+      },
+    },
+    async ({ id }) => asText(await sonarr.queueRegrab(id)),
+  );
 }
