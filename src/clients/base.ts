@@ -67,6 +67,10 @@ export class ServarrClient {
     return this.request("/qualityprofile");
   }
 
+  async metadataProfiles(): Promise<unknown> {
+    return this.request("/metadataprofile");
+  }
+
   async rootFolders(): Promise<unknown> {
     return this.request("/rootfolder");
   }

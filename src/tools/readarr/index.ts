@@ -118,6 +118,17 @@ export function registerReadarrTools(
   );
 
   server.registerTool(
+    "readarr_list_metadata_profiles",
+    {
+      title: "Readarr: List Metadata Profiles",
+      description:
+        "List Readarr metadata profiles (controls which editions/books from an author qualify — minPopularity, skipMissingDate, skipMissingIsbn, allowedLanguages, minPages, etc.). The `id` is required as `metadataProfileId` when adding an author.",
+      inputSchema: {},
+    },
+    async () => asText(await readarr.metadataProfiles()),
+  );
+
+  server.registerTool(
     "readarr_list_root_folders",
     {
       title: "Readarr: List Root Folders",
