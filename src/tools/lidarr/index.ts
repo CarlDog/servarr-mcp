@@ -118,6 +118,17 @@ export function registerLidarrTools(
   );
 
   server.registerTool(
+    "lidarr_list_metadata_profiles",
+    {
+      title: "Lidarr: List Metadata Profiles",
+      description:
+        "List Lidarr metadata profiles (controls which releases qualify per artist). The `id` is required as `metadataProfileId` when adding an artist.",
+      inputSchema: {},
+    },
+    async () => asText(await lidarr.metadataProfiles()),
+  );
+
+  server.registerTool(
     "lidarr_list_root_folders",
     {
       title: "Lidarr: List Root Folders",
