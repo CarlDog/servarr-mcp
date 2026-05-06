@@ -112,6 +112,17 @@ export function registerSonarrTools(
     async () => asText(await sonarr.rootFolders()),
   );
 
+  server.registerTool(
+    "sonarr_list_tags",
+    {
+      title: "Sonarr: List Tags",
+      description:
+        "List Sonarr tags (label + id pairs). Useful for scoping queries by tag (e.g. 'show me everything tagged kids') and for setting tag ids on add/edit operations.",
+      inputSchema: {},
+    },
+    async () => asText(await sonarr.tags()),
+  );
+
   registerQueueTools(server, sonarr);
   registerHistoryTools(server, sonarr);
   registerWantedTools(server, sonarr);
