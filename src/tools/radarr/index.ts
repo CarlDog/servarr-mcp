@@ -44,6 +44,36 @@ export function registerRadarrTools(
   );
 
   server.registerTool(
+    "radarr_lookup_tmdb",
+    {
+      title: "Radarr: Lookup Movie by TMDB ID",
+      description:
+        "Direct lookup of a movie on TMDB by id — use when you already have a TMDB id (e.g. from Plex, Trakt, etc.) instead of fuzzy term search. Returns the same MovieResource shape as `radarr_lookup_movie`, suitable for `radarr_add_movie`.",
+      inputSchema: {
+        tmdb_id: z.number().int().describe("TMDB movie id"),
+      },
+    },
+    async ({ tmdb_id }) => asText(await radarr.lookupTmdb(tmdb_id)),
+  );
+
+  server.registerTool(
+    "radarr_lookup_imdb",
+    {
+      title: "Radarr: Lookup Movie by IMDB ID",
+      description:
+        "Direct lookup of a movie on IMDB by id — use when you already have an IMDB id (e.g. tt0119698) instead of fuzzy term search. Returns the same MovieResource shape as `radarr_lookup_movie`.",
+      inputSchema: {
+        imdb_id: z
+          .string()
+          .describe(
+            'IMDB id including the "tt" prefix (e.g. "tt0119698" for Princess Mononoke).',
+          ),
+      },
+    },
+    async ({ imdb_id }) => asText(await radarr.lookupImdb(imdb_id)),
+  );
+
+  server.registerTool(
     "radarr_calendar",
     {
       title: "Radarr: Calendar",
