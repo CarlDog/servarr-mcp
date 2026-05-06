@@ -4,12 +4,13 @@
 
 ## Phase
 
-Tier-1 diagnostics + closure batch shipped: command-status polling,
-tag listing, prowlarr indexer-status, and single-resource
-drill-downs. **86 tools live on the NAS deploy** (Sonarr / Radarr /
-Lidarr / Prowlarr; Readarr still disabled until its Goodreads
-upstream is operational; code count is 91 including 5 Readarr-only
-tools that ship but don't register on this deploy). Code-complete
+Tier-2 quality-of-life batch shipped on top of Tier-1: queue
+pagination, per-resource history, Radarr direct-id lookups, and
+Lidarr trackfile listing for orphan-file reconciliation. **92 tools
+live on the NAS deploy** (Sonarr / Radarr / Lidarr / Prowlarr;
+Readarr still disabled until its Goodreads upstream is operational;
+code count is 98 including 6 Readarr-only tools that ship but don't
+register on this deploy). Code-complete
 catalogue: cross-app observability (health/diskspace), add-media
 prerequisites (list_quality_profiles, list_root_folders, list_tags,
 list_metadata_profiles for Lidarr/Readarr), wanted/missing +
@@ -414,6 +415,39 @@ Smoke-tested against the deploy: Radarr returned 18 candidates for
 reasons populated (releases were rejected because user already has
 preferred files on disk — expected behavior). Readarr's ships in
 code but is disabled on the deploy.
+
+## Done (Tier 2 — quality-of-life)
+
+Four small batches addressing real friction observed across this
+session.
+
+- **`<app>_queue` paged** for Sonarr/Radarr/Lidarr/Readarr — the
+  existing tool gained optional `page` / `page_size` inputs
+  (defaults: 1 / 20, max 100). No new tool — backward-compatible
+  in-place enhancement. Earlier in the session a 15-record Radarr
+  queue overflowed our context buffer; real queues hit 50+
+  routinely. Plumbing on `ServarrClient.queue(page, pageSize)`.
+- **Per-resource history** for Sonarr/Radarr/Lidarr/Readarr —
+  `<app>_history_<resource>` (`history_series`, `history_movie`,
+  `history_artist`, `history_author`). Sonarr's full history is
+  ~250000 records on this deploy — server-wide queries are
+  unusable for "what happened with X?" lookups. Smoke-tested with
+  Princess Mononoke (movie 17603): returned 4 events showing the
+  full grab → import → delete → re-grab upgrade path.
+- **Radarr direct-id lookups** — `radarr_lookup_tmdb`,
+  `radarr_lookup_imdb`. When the caller already has a TMDB id
+  (e.g. from Plex) or an IMDB id ("tt0119698"), going through
+  `radarr_lookup_movie`'s fuzzy term search wastes a round-trip
+  and risks fuzzy mismatch. Smoke-tested with `tt0119698` —
+  returned the full MovieResource for Princess Mononoke in one
+  shot.
+- **Lidarr trackfile listing** — `lidarr_list_trackfiles` with
+  optional `artist_id` / `album_id` / `unmapped` filters.
+  `unmapped=true` returns orphan files (on disk but not linked to
+  any track) — composes with filesystem-mcp for "what's on disk
+  that shouldn't be?" reconciliation queries. Lidarr-only per docs
+  scope; Sonarr/Radarr/Readarr have equivalent
+  `/episodefile`/`/moviefile`/`/bookfile` endpoints if/when needed.
 
 ## Done (Tier 1 — diagnostics + closure)
 
