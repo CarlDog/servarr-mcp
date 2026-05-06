@@ -61,6 +61,32 @@ export function registerLidarrTools(
   );
 
   server.registerTool(
+    "lidarr_get_album",
+    {
+      title: "Lidarr: Get Album",
+      description:
+        "Get full details for a single Lidarr album by ID — release date, track list, monitored state, etc.",
+      inputSchema: {
+        id: z.number().int().describe("The Lidarr album ID"),
+      },
+    },
+    async ({ id }) => asText(await lidarr.getAlbum(id)),
+  );
+
+  server.registerTool(
+    "lidarr_get_track",
+    {
+      title: "Lidarr: Get Track",
+      description:
+        "Get full details for a single Lidarr track by ID — duration, track number, file info, etc.",
+      inputSchema: {
+        id: z.number().int().describe("The Lidarr track ID"),
+      },
+    },
+    async ({ id }) => asText(await lidarr.getTrack(id)),
+  );
+
+  server.registerTool(
     "lidarr_health",
     {
       title: "Lidarr: Health",

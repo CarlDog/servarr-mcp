@@ -31,4 +31,12 @@ export class LidarrClient extends ServarrClient {
     }
     return this.request("/album", { artistId });
   }
+
+  async getAlbum(id: number): Promise<unknown> {
+    return this.request(`/album/${id}`);
+  }
+
+  async getTrack(id: number): Promise<unknown> {
+    return this.request(`/track/${id}`);
+  }
 }

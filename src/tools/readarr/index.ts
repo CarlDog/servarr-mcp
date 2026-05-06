@@ -61,6 +61,19 @@ export function registerReadarrTools(
   );
 
   server.registerTool(
+    "readarr_get_book",
+    {
+      title: "Readarr: Get Book",
+      description:
+        "Get full details for a single Readarr book by ID — release date, edition info, file info, monitored state, etc.",
+      inputSchema: {
+        id: z.number().int().describe("The Readarr book ID"),
+      },
+    },
+    async ({ id }) => asText(await readarr.getBook(id)),
+  );
+
+  server.registerTool(
     "readarr_health",
     {
       title: "Readarr: Health",
