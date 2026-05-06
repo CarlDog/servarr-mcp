@@ -6,6 +6,7 @@ import { registerAuthorTools } from "./authors.js";
 import { registerCommandTools } from "./commands.js";
 import { registerHistoryTools } from "./history.js";
 import { registerQueueTools } from "./queue.js";
+import { registerReleaseTools } from "./releases.js";
 import { registerWantedTools } from "./wanted.js";
 
 export function registerReadarrTools(
@@ -58,7 +59,6 @@ export function registerReadarrTools(
     },
     async ({ author_id }) => asText(await readarr.listBooks(author_id)),
   );
-
 
   server.registerTool(
     "readarr_health",
@@ -120,4 +120,5 @@ export function registerReadarrTools(
   registerWantedTools(server, readarr);
   registerCommandTools(server, readarr);
   registerAuthorTools(server, readarr);
+  registerReleaseTools(server, readarr);
 }

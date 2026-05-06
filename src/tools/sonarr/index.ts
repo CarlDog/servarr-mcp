@@ -5,6 +5,7 @@ import type { SonarrClient } from "../../clients/sonarr.js";
 import { registerCommandTools } from "./commands.js";
 import { registerHistoryTools } from "./history.js";
 import { registerQueueTools } from "./queue.js";
+import { registerReleaseTools } from "./releases.js";
 import { registerSeriesTools } from "./series.js";
 import { registerWantedTools } from "./wanted.js";
 
@@ -116,4 +117,5 @@ export function registerSonarrTools(
   registerWantedTools(server, sonarr);
   registerCommandTools(server, sonarr);
   registerSeriesTools(server, sonarr);
+  registerReleaseTools(server, sonarr);
 }

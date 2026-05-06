@@ -6,6 +6,7 @@ import { registerArtistTools } from "./artists.js";
 import { registerCommandTools } from "./commands.js";
 import { registerHistoryTools } from "./history.js";
 import { registerQueueTools } from "./queue.js";
+import { registerReleaseTools } from "./releases.js";
 import { registerWantedTools } from "./wanted.js";
 
 export function registerLidarrTools(
@@ -58,7 +59,6 @@ export function registerLidarrTools(
     },
     async ({ artist_id }) => asText(await lidarr.listAlbums(artist_id)),
   );
-
 
   server.registerTool(
     "lidarr_health",
@@ -120,4 +120,5 @@ export function registerLidarrTools(
   registerWantedTools(server, lidarr);
   registerCommandTools(server, lidarr);
   registerArtistTools(server, lidarr);
+  registerReleaseTools(server, lidarr);
 }

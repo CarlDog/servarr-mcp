@@ -6,6 +6,7 @@ import { registerCommandTools } from "./commands.js";
 import { registerHistoryTools } from "./history.js";
 import { registerMovieTools } from "./movies.js";
 import { registerQueueTools } from "./queue.js";
+import { registerReleaseTools } from "./releases.js";
 import { registerWantedTools } from "./wanted.js";
 
 export function registerRadarrTools(
@@ -54,7 +55,6 @@ export function registerRadarrTools(
     },
     async ({ start, end }) => asText(await radarr.calendar(start, end)),
   );
-
 
   server.registerTool(
     "radarr_health",
@@ -105,4 +105,5 @@ export function registerRadarrTools(
   registerWantedTools(server, radarr);
   registerCommandTools(server, radarr);
   registerMovieTools(server, radarr);
+  registerReleaseTools(server, radarr);
 }
