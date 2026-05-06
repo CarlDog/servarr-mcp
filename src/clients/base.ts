@@ -144,8 +144,8 @@ export class ServarrClient {
     return this.request("/tag");
   }
 
-  async queue(): Promise<unknown> {
-    return this.request("/queue");
+  async queue(page = 1, pageSize = 20): Promise<unknown> {
+    return this.request("/queue", { page, pageSize });
   }
 
   async queueRemove(
