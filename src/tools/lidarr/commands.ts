@@ -44,10 +44,7 @@ export function registerCommandTools(
       description:
         "Trigger Lidarr to search indexers for all monitored, missing albums of one artist. Async — returns the queued CommandResource.",
       inputSchema: {
-        artist_id: z
-          .number()
-          .int()
-          .describe("The Lidarr artist ID to search."),
+        artist_id: z.number().int().describe("The Lidarr artist ID to search."),
       },
     },
     async ({ artist_id }) =>

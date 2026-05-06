@@ -31,7 +31,9 @@ export function registerSeriesTools(
         tvdb_id: z
           .number()
           .int()
-          .describe("The TVDB id of the series to add (from sonarr_lookup_series)."),
+          .describe(
+            "The TVDB id of the series to add (from sonarr_lookup_series).",
+          ),
         quality_profile_id: z
           .number()
           .int()
@@ -46,7 +48,9 @@ export function registerSeriesTools(
         season_folder: z
           .boolean()
           .optional()
-          .describe("Organize episodes into per-season subfolders (default true)."),
+          .describe(
+            "Organize episodes into per-season subfolders (default true).",
+          ),
         monitor: MonitorOption.optional().describe(
           "Which episodes to monitor on add (default 'all').",
         ),
@@ -67,9 +71,9 @@ export function registerSeriesTools(
       monitor = "all",
       search_for_missing_episodes = false,
     }) => {
-      const lookup = (await sonarr.lookupSeries(
-        `tvdb:${tvdb_id}`,
-      )) as Array<Record<string, unknown>>;
+      const lookup = (await sonarr.lookupSeries(`tvdb:${tvdb_id}`)) as Array<
+        Record<string, unknown>
+      >;
       if (!Array.isArray(lookup) || lookup.length === 0) {
         throw new Error(
           `Sonarr lookup returned no results for TVDB id ${tvdb_id}.`,
@@ -125,9 +129,7 @@ export function registerSeriesTools(
         season_folder: z
           .boolean()
           .optional()
-          .describe(
-            "Toggle the per-season subfolder organization.",
-          ),
+          .describe("Toggle the per-season subfolder organization."),
         tags: z
           .array(z.number().int())
           .optional()
