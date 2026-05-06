@@ -11,10 +11,25 @@ export function registerQueueTools(
     "radarr_queue",
     {
       title: "Radarr: Queue",
-      description: "Get the current Radarr download queue.",
-      inputSchema: {},
+      description:
+        "Get the current Radarr download queue, paged. Default returns the first 20 records. Bump page_size or step through pages when the queue is large.",
+      inputSchema: {
+        page: z
+          .number()
+          .int()
+          .min(1)
+          .optional()
+          .describe("1-indexed page number (default 1)."),
+        page_size: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe("Records per page (default 20, max 100)."),
+      },
     },
-    async () => asText(await radarr.queue()),
+    async ({ page, page_size }) => asText(await radarr.queue(page, page_size)),
   );
 
   server.registerTool(

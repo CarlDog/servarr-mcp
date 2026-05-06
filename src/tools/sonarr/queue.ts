@@ -11,10 +11,25 @@ export function registerQueueTools(
     "sonarr_queue",
     {
       title: "Sonarr: Queue",
-      description: "Get the current Sonarr download queue.",
-      inputSchema: {},
+      description:
+        "Get the current Sonarr download queue, paged. Default returns the first 20 records. Bump page_size or step through pages when the queue is large.",
+      inputSchema: {
+        page: z
+          .number()
+          .int()
+          .min(1)
+          .optional()
+          .describe("1-indexed page number (default 1)."),
+        page_size: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe("Records per page (default 20, max 100)."),
+      },
     },
-    async () => asText(await sonarr.queue()),
+    async ({ page, page_size }) => asText(await sonarr.queue(page, page_size)),
   );
 
   server.registerTool(
