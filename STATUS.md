@@ -18,8 +18,9 @@ add-media for the four media apps, `<app>_queue_remove` +
 `<app>_history_mark_failed` for the four media apps,
 `<app>_edit_<resource>` for the four media apps,
 `<app>_release_search` for the four media apps, and
-`<app>_grab_release` for the four media apps (only Radarr's
-verified end-to-end so far — see Known Gaps). Per-resource
+`<app>_grab_release` for the four media apps (Radarr + Sonarr
+verified end-to-end; Lidarr untested — see Known Gaps).
+Per-resource
 sibling files: `queue.ts`, `history.ts`, `wanted.ts`, `commands.ts`,
 `releases.ts`, plus the existing `series.ts`/`movies.ts`/
 `artists.ts`/`authors.ts`. Same-host hostname trap fixed early
@@ -430,32 +431,39 @@ Plumbing on `ServarrClient` base: new `grabRelease(body)` method.
 Per-app tool registration lives alongside `release_search` in the
 existing `releases.ts` siblings.
 
-**Bug caught at smoke test time** (Radarr): the search returns
-ReleaseResource with `movieId: null` and the actual match in
-`mappedMovieId`. POST fails with "Value can not be null. (Parameter
-'release.MovieId')" if `movieId` isn't on the body. Radarr's
-handler now copies `mappedMovieId → movieId` automatically before
-posting, unless the caller already set `movieId` explicitly.
-Sonarr likely has the same pattern (mapped\* → direct on
-seriesId/episodeId/seasonNumber), and Lidarr/Readarr have *no*
-`mapped*` fields at all in their ReleaseResource — so they may
-already work or may need a different fix. Both untested as of this
-write.
+**Bug caught at smoke test time** (Radarr, then Sonarr): the search
+returns ReleaseResource with destination IDs null and the actual
+match in `mapped*Id` fields. POST fails with "Value can not be
+null. (Parameter 'release.MovieId')" / `release.SeriesId` if those
+aren't set on the body. Each handler now copies the relevant mapped
+fields to their direct counterparts before posting, unless the
+caller already set them explicitly:
 
-Smoke test (Radarr): grabbed `[REVO-deanzel] Princess Mononoke
-[BD 1080p Hi10p Dual Audio FLAC]` for movie_id=17603 with
-`should_override=true` (the existing Remux-1080p file scored
-higher). Radarr history showed `eventType=grabbed`,
-`releaseSource=InteractiveSearch`, handed off to SABnzbd. Verified
-end-to-end.
+| App | Copies |
+| --- | --- |
+| Radarr | `mappedMovieId → movieId` |
+| Sonarr | `mappedSeriesId → seriesId`, `mappedEpisodeInfo[].id → episodeIds` |
+| Lidarr / Readarr | (no mapped\* fields exist, untested) |
+
+Smoke tests:
+- **Radarr**: grabbed `[REVO-deanzel] Princess Mononoke [BD 1080p
+  Hi10p Dual Audio FLAC]` for movie_id=17603 with
+  `should_override=true` (existing Remux-1080p file scored
+  higher). Radarr history showed `eventType=grabbed`,
+  `releaseSource=InteractiveSearch`, handed off to SABnzbd.
+- **Sonarr**: grabbed `Daredevil.Born.Again.S02E08.The.Southern.
+  Cross.1080p.DSNP.WEB-DL.DDP5.1.Atmos.H.264-FLUX` for
+  episode_id=154373 with `should_override=true` (existing file had
+  equal cf_score 1700). Sonarr history showed `eventType=grabbed`,
+  `releaseType=SingleEpisode`, `releaseSource=InteractiveSearch`,
+  handed off to SABnzbd.
 
 ## Next
 
-1. **Smoke-test `sonarr_grab_release` / `lidarr_grab_release`** —
-   confirm whether the same `mapped*Id → *Id` issue exists, and
-   whether Lidarr's lack of mapped fields just works. Mirror the
-   Radarr fix to Sonarr if needed (probably yes for series /
-   episode IDs).
+1. **Smoke-test `lidarr_grab_release` / `readarr_grab_release`** —
+   confirm whether Lidarr's lack of mapped fields just works.
+   Readarr's tool ships in code but the deploy disables Readarr,
+   so its real test will wait until the Goodreads upstream is back.
 2. **Add tests** once a real Servarr test target is set up (don't
    mock).
 3. **Optional later additions**: `radarr_edit_collection`
@@ -490,11 +498,12 @@ None active. Decisions made during scaffolding:
 ## Known Gaps
 
 - No tests yet.
-- `sonarr_grab_release`, `lidarr_grab_release`, `readarr_grab_release`
-  ship in code but only `radarr_grab_release` has been verified
-  end-to-end. Sonarr likely needs the same `mapped*Id → *Id`
-  plumbing-fix that Radarr got; Lidarr/Readarr have no mapped fields
-  at all and may already work (or may need different handling).
+- `lidarr_grab_release` / `readarr_grab_release` ship in code but
+  haven't been verified end-to-end. Lidarr/Readarr have no `mapped*`
+  fields in their ReleaseResource, so the Radarr/Sonarr-style fix
+  doesn't apply directly — they may already work, or may need a
+  different fix discovered at smoke-test time. Readarr's deploy is
+  disabled until Goodreads is back.
 - API paths and endpoint shapes were derived from training data and
   smoke-tested only against the configured apps so far. Less-exercised
   endpoints (calendar, history) may have surprises on first call.
