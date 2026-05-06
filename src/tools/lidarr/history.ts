@@ -26,6 +26,19 @@ export function registerHistoryTools(
   );
 
   server.registerTool(
+    "lidarr_history_artist",
+    {
+      title: "Lidarr: Artist History",
+      description:
+        "Get history scoped to a single artist — every grab/import/upgrade/delete event for that artist's discography. Much narrower than `lidarr_history`, which is server-wide.",
+      inputSchema: {
+        artist_id: z.number().int().describe("The Lidarr artist ID."),
+      },
+    },
+    async ({ artist_id }) => asText(await lidarr.historyArtist(artist_id)),
+  );
+
+  server.registerTool(
     "lidarr_history_mark_failed",
     {
       title: "Lidarr: Mark History Failed",

@@ -26,6 +26,19 @@ export function registerHistoryTools(
   );
 
   server.registerTool(
+    "readarr_history_author",
+    {
+      title: "Readarr: Author History",
+      description:
+        "Get history scoped to a single author — every grab/import/upgrade/delete event for that author's bibliography. Much narrower than `readarr_history`, which is server-wide.",
+      inputSchema: {
+        author_id: z.number().int().describe("The Readarr author ID."),
+      },
+    },
+    async ({ author_id }) => asText(await readarr.historyAuthor(author_id)),
+  );
+
+  server.registerTool(
     "readarr_history_mark_failed",
     {
       title: "Readarr: Mark History Failed",

@@ -39,4 +39,8 @@ export class LidarrClient extends ServarrClient {
   async getTrack(id: number): Promise<unknown> {
     return this.request(`/track/${id}`);
   }
+
+  async historyArtist(artistId: number): Promise<unknown> {
+    return this.request("/history/artist", { artistId });
+  }
 }
