@@ -4,19 +4,22 @@
 
 ## Phase
 
-`release_search` read tool shipped — the prerequisite for the still-
-to-come `grab_release` write. **73 tools live on the NAS deploy**
-(Sonarr/Radarr/Lidarr/Prowlarr; Readarr still disabled until its
-Goodreads upstream is operational; Readarr's release_search ships in
-code at 74). Code-complete catalogue now covers: cross-app
-observability (health/diskspace), add-media prerequisites
-(list_quality_profiles, list_root_folders, list_metadata_profiles
-for Lidarr/Readarr), wanted/missing + wanted/cutoff queries, full
-command-trigger surface (16 tools), add-media for the four media
-apps, `<app>_queue_remove` + `<app>_queue_regrab` for the four media
-apps, `<app>_history_mark_failed` for the four media apps,
-`<app>_edit_<resource>` for the four media apps, and
-`<app>_release_search` for the four media apps. Per-resource
+`grab_release` write tool shipped — the v1 write surface is now
+complete end-to-end (search → grab). **76 tools live on the NAS
+deploy** (Sonarr/Radarr/Lidarr/Prowlarr; Readarr still disabled
+until its Goodreads upstream is operational; code count is 78
+including Readarr's release_search + grab_release). Code-complete
+catalogue: cross-app observability (health/diskspace), add-media
+prerequisites (list_quality_profiles, list_root_folders,
+list_metadata_profiles for Lidarr/Readarr), wanted/missing +
+wanted/cutoff queries, full command-trigger surface (16 tools),
+add-media for the four media apps, `<app>_queue_remove` +
+`<app>_queue_regrab` for the four media apps,
+`<app>_history_mark_failed` for the four media apps,
+`<app>_edit_<resource>` for the four media apps,
+`<app>_release_search` for the four media apps, and
+`<app>_grab_release` for the four media apps (only Radarr's
+verified end-to-end so far — see Known Gaps). Per-resource
 sibling files: `queue.ts`, `history.ts`, `wanted.ts`, `commands.ts`,
 `releases.ts`, plus the existing `series.ts`/`movies.ts`/
 `artists.ts`/`authors.ts`. Same-host hostname trap fixed early
@@ -407,15 +410,52 @@ reasons populated (releases were rejected because user already has
 preferred files on disk — expected behavior). Readarr's ships in
 code but is disabled on the deploy.
 
+## Done (write tools — grab release)
+
+`<app>_grab_release` shipped for Sonarr, Radarr, Lidarr, Readarr.
+Hits `POST /release` with the ReleaseResource passed back verbatim
+from `release_search`. Servarr keys the lookup on guid+indexerId
+from its in-memory release cache; cache TTL is short (a few minutes,
+and is wiped on container restart), so a "release not found" error
+typically means re-run release_search and try again.
+
+Tool input shape: a `release` object with required guid + indexerId,
+all other fields `.passthrough()`ed so the LLM can hand the object
+back unchanged. Plus an optional `should_override` boolean that
+sets shouldOverride=true on the body — the equivalent of Servarr's
+UI "Override and Download" button, used to force-grab releases the
+quality profile rejected.
+
+Plumbing on `ServarrClient` base: new `grabRelease(body)` method.
+Per-app tool registration lives alongside `release_search` in the
+existing `releases.ts` siblings.
+
+**Bug caught at smoke test time** (Radarr): the search returns
+ReleaseResource with `movieId: null` and the actual match in
+`mappedMovieId`. POST fails with "Value can not be null. (Parameter
+'release.MovieId')" if `movieId` isn't on the body. Radarr's
+handler now copies `mappedMovieId → movieId` automatically before
+posting, unless the caller already set `movieId` explicitly.
+Sonarr likely has the same pattern (mapped\* → direct on
+seriesId/episodeId/seasonNumber), and Lidarr/Readarr have *no*
+`mapped*` fields at all in their ReleaseResource — so they may
+already work or may need a different fix. Both untested as of this
+write.
+
+Smoke test (Radarr): grabbed `[REVO-deanzel] Princess Mononoke
+[BD 1080p Hi10p Dual Audio FLAC]` for movie_id=17603 with
+`should_override=true` (the existing Remux-1080p file scored
+higher). Radarr history showed `eventType=grabbed`,
+`releaseSource=InteractiveSearch`, handed off to SABnzbd. Verified
+end-to-end.
+
 ## Next
 
-1. **`<app>_grab_release`** — `POST /release` with the
-   ReleaseResource body returned by `release_search`. High risk:
-   bypasses normal indexer-pick logic and immediately queues a
-   download. Hardest part is plumbing the full ReleaseResource
-   round-trip (the body schema is large; we may want to accept just
-   `guid` + `indexerId` and reconstruct, since that's what Servarr
-   actually requires).
+1. **Smoke-test `sonarr_grab_release` / `lidarr_grab_release`** —
+   confirm whether the same `mapped*Id → *Id` issue exists, and
+   whether Lidarr's lack of mapped fields just works. Mirror the
+   Radarr fix to Sonarr if needed (probably yes for series /
+   episode IDs).
 2. **Add tests** once a real Servarr test target is set up (don't
    mock).
 3. **Optional later additions**: `radarr_edit_collection`
@@ -450,6 +490,11 @@ None active. Decisions made during scaffolding:
 ## Known Gaps
 
 - No tests yet.
+- `sonarr_grab_release`, `lidarr_grab_release`, `readarr_grab_release`
+  ship in code but only `radarr_grab_release` has been verified
+  end-to-end. Sonarr likely needs the same `mapped*Id → *Id`
+  plumbing-fix that Radarr got; Lidarr/Readarr have no mapped fields
+  at all and may already work (or may need different handling).
 - API paths and endpoint shapes were derived from training data and
   smoke-tested only against the configured apps so far. Less-exercised
   endpoints (calendar, history) may have surprises on first call.
