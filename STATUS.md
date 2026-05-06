@@ -411,6 +411,28 @@ reasons populated (releases were rejected because user already has
 preferred files on disk — expected behavior). Readarr's ships in
 code but is disabled on the deploy.
 
+## Done (UX — progress notifications during release_search)
+
+The four `<app>_release_search` handlers now emit
+`notifications/progress` every 20s while the upstream `GET /release`
+is in flight. Messages are scoped to the search target ("Sonarr:
+searching indexers for episode 154373… (40s elapsed)") so the user
+can see what's still in progress.
+
+New helper `withProgress(extra, mkMessage, intervalMs, fn)` in
+`ServarrClient` base. Skips emission if the client didn't include a
+`progressToken` in the request `_meta`. Generic over the
+notification type so the SDK's strict `ServerNotification` union
+flows through without coercion at the call site.
+
+**Visibility caveat:** Claude Code (current shipping version)
+does *not* surface MCP progress notifications to the agent or user
+during a tool call. Verified by running radarr_release_search for
+movie 17603 (≈30s wall time); no progress line appeared. The code
+is spec-compliant — kept as latent capability for clients that do
+surface them. Pairing with a hard timeout (still parked) would give
+an actual user-visible "timed out" surface in this client.
+
 ## Done (write tools — grab release)
 
 `<app>_grab_release` shipped for Sonarr, Radarr, Lidarr, Readarr.
