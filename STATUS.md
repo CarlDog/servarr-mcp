@@ -1,23 +1,25 @@
 # Status
 
-**Last updated:** 2026-05-01
+**Last updated:** 2026-05-06
 
 ## Phase
 
-Edit-media added on top of the queue + history write surface.
-**70 tools live on the NAS deploy** (Sonarr/Radarr/Lidarr/Prowlarr;
-Readarr still disabled until its Goodreads upstream is operational).
-Code-complete catalogue now covers: cross-app observability
-(health/diskspace), add-media prerequisites (list_quality_profiles,
-list_root_folders, list_metadata_profiles for Lidarr/Readarr),
-wanted/missing + wanted/cutoff queries, full command-trigger surface
-(16 tools), add-media for the four media apps,
-`<app>_queue_remove` + `<app>_queue_regrab` for the four media apps,
-`<app>_history_mark_failed` for the four media apps, and
-`<app>_edit_<resource>` for the four media apps. Per-resource
-sibling files: `queue.ts`, `history.ts`, plus the existing
-`series.ts`/`movies.ts`/`artists.ts`/`authors.ts` (which now hold
-add + edit). Same-host hostname trap fixed early
+`release_search` read tool shipped — the prerequisite for the still-
+to-come `grab_release` write. **73 tools live on the NAS deploy**
+(Sonarr/Radarr/Lidarr/Prowlarr; Readarr still disabled until its
+Goodreads upstream is operational; Readarr's release_search ships in
+code at 74). Code-complete catalogue now covers: cross-app
+observability (health/diskspace), add-media prerequisites
+(list_quality_profiles, list_root_folders, list_metadata_profiles
+for Lidarr/Readarr), wanted/missing + wanted/cutoff queries, full
+command-trigger surface (16 tools), add-media for the four media
+apps, `<app>_queue_remove` + `<app>_queue_regrab` for the four media
+apps, `<app>_history_mark_failed` for the four media apps,
+`<app>_edit_<resource>` for the four media apps, and
+`<app>_release_search` for the four media apps. Per-resource
+sibling files: `queue.ts`, `history.ts`, `wanted.ts`, `commands.ts`,
+`releases.ts`, plus the existing `series.ts`/`movies.ts`/
+`artists.ts`/`authors.ts`. Same-host hostname trap fixed early
 (`extra_hosts: host.docker.internal:host-gateway` in compose, env
 URLs use `http://host.docker.internal:<port>`). Deploy git-managed
 Portainer stack id 148.
@@ -375,18 +377,48 @@ unchanged resource. Sonarr/Radarr/Lidarr all returned the original
 title + monitored state intact. Readarr's ships but is disabled on
 the deploy.
 
+## Done (read tools — release search)
+
+`<app>_release_search` shipped for Sonarr, Radarr, Lidarr, Readarr.
+Hits `GET /release` with the per-app id filters: `seriesId` /
+`episodeId` / `seasonNumber` (Sonarr), `movieId` (Radarr), `artistId`
+/ `albumId` (Lidarr), `authorId` / `bookId` (Readarr). Returns
+ReleaseResource[] candidates without grabbing — feeds the future
+grab_release write tool.
+
+The endpoint triggers a live indexer search server-side, so tools
+warn it's slow + rate-limit-sensitive in their descriptions. At
+least one scoping id is required at the tool layer (handler-level
+guard, since a Zod-shape `inputSchema` doesn't expose `.refine()`)
+to keep the LLM from issuing unscoped indexer searches.
+
+Plumbing on `ServarrClient` base: new
+`searchReleases(params: Record<string, number | undefined>)` that
+filters out undefined values before forwarding to `/release`. Each
+app's tool registration lives in a new
+`src/tools/<app>/releases.ts` sibling — pre-staged for the
+grab_release pair.
+
+Smoke-tested against the deploy: Radarr returned 18 candidates for
+"14 Blades" (movie_id=7899), Sonarr 198 for The Herculoids S1
+(series_id=257, season_number=1), Lidarr 50 for Weird Al Yankovic
+(artist_id=1). All returned full ReleaseResource shape with rejection
+reasons populated (releases were rejected because user already has
+preferred files on disk — expected behavior). Readarr's ships in
+code but is disabled on the deploy.
+
 ## Next
 
-1. **`<app>_grab_release`** — `POST /release`. High risk: bypasses
-   normal indexer-pick logic. Defer until a `release_search` read
-   tool ships first so the LLM has candidate releases to choose
-   from.
-2. **`release_search`** read tool — `GET /release?<filters>` —
-   prerequisite for grab_release. Returns candidate releases for
-   manual grab.
-3. **Add tests** once a real Servarr test target is set up (don't
+1. **`<app>_grab_release`** — `POST /release` with the
+   ReleaseResource body returned by `release_search`. High risk:
+   bypasses normal indexer-pick logic and immediately queues a
+   download. Hardest part is plumbing the full ReleaseResource
+   round-trip (the body schema is large; we may want to accept just
+   `guid` + `indexerId` and reconstruct, since that's what Servarr
+   actually requires).
+2. **Add tests** once a real Servarr test target is set up (don't
    mock).
-4. **Optional later additions**: `radarr_edit_collection`
+3. **Optional later additions**: `radarr_edit_collection`
    (collection-level monitoring, Radarr-specific),
    `lidarr_monitor_albums` / `readarr_monitor_books` (bulk monitor
    toggles), per-season/episode monitor tools for Sonarr.
