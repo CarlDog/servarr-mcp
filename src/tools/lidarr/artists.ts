@@ -129,12 +129,14 @@ export function registerArtistTools(
           .string()
           .optional()
           .describe(
-            "Change the root folder. WARNING: this moves the artist's files on disk.",
+            "Change the root folder (from lidarr_list_root_folders). WARNING: this moves the artist's files on disk.",
           ),
         tags: z
           .array(z.number().int())
           .optional()
-          .describe("Replace the tag id list (full list, not append)."),
+          .describe(
+            "Replace the tag id list (from lidarr_list_tags). Full replacement, not append.",
+          ),
       },
       annotations: ANN_EDIT,
     },

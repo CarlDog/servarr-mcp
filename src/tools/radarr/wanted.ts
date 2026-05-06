@@ -12,7 +12,7 @@ export function registerWantedTools(
     {
       title: "Radarr: Wanted (Missing)",
       description:
-        "List movies that are wanted but not yet downloaded. Filters to monitored items by default.",
+        "List movies that are wanted but not yet downloaded. Filters to monitored items by default. Once you've identified what's missing, trigger an indexer hunt with `radarr_search_missing`.",
       inputSchema: {
         page_size: z
           .number()
@@ -37,7 +37,7 @@ export function registerWantedTools(
     {
       title: "Radarr: Wanted (Below Cutoff)",
       description:
-        "List movies downloaded below cutoff quality — upgrade candidates. Filters to monitored items by default.",
+        "List movies downloaded below cutoff quality — upgrade candidates. Filters to monitored items by default. Items here are upgrade candidates; trigger a re-search with `radarr_search_missing` (which also picks up cutoff-unmet items by default).",
       inputSchema: {
         page_size: z
           .number()

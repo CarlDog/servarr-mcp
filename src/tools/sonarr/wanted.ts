@@ -12,7 +12,7 @@ export function registerWantedTools(
     {
       title: "Sonarr: Wanted (Missing)",
       description:
-        "List episodes that are wanted but not yet downloaded. Filters to monitored items by default.",
+        "List episodes that are wanted but not yet downloaded. Filters to monitored items by default. Once you've identified what's missing, trigger an indexer hunt with `sonarr_search_missing`.",
       inputSchema: {
         page_size: z
           .number()
@@ -37,7 +37,7 @@ export function registerWantedTools(
     {
       title: "Sonarr: Wanted (Below Cutoff)",
       description:
-        "List episodes downloaded below cutoff quality — upgrade candidates. Filters to monitored items by default.",
+        "List episodes downloaded below cutoff quality — upgrade candidates. Filters to monitored items by default. Items here are upgrade candidates; trigger a re-search with `sonarr_search_missing` (which also picks up cutoff-unmet items by default).",
       inputSchema: {
         page_size: z
           .number()

@@ -12,7 +12,7 @@ export function registerCommandTools(
     {
       title: "Readarr: Search Missing Books",
       description:
-        "Trigger Readarr to search indexers for all monitored, missing books. Async — returns the queued CommandResource (id, status); the actual search runs in the background. Poll Readarr's UI or query the queue tools to see results.",
+        "Trigger Readarr to search indexers for all monitored, missing books. Async — returns the queued CommandResource (id, status); the actual search runs in the background. Poll status with `readarr_get_command` (use the returned id).",
       inputSchema: {},
       annotations: ANN_COMMAND,
     },
@@ -24,7 +24,7 @@ export function registerCommandTools(
     {
       title: "Readarr: Refresh Author Metadata",
       description:
-        "Trigger Readarr to re-pull metadata for one author (bibliography, artwork). Async — returns the queued CommandResource.",
+        "Trigger Readarr to re-pull metadata for one author (bibliography, artwork). Async — returns the queued CommandResource. Poll status with `readarr_get_command` (use the returned id).",
       inputSchema: {
         author_id: z
           .number()
@@ -44,7 +44,7 @@ export function registerCommandTools(
     {
       title: "Readarr: Search Author",
       description:
-        "Trigger Readarr to search indexers for all monitored, missing books of one author. Async — returns the queued CommandResource.",
+        "Trigger Readarr to search indexers for all monitored, missing books of one author. Async — returns the queued CommandResource. Poll status with `readarr_get_command` (use the returned id).",
       inputSchema: {
         author_id: z
           .number()
@@ -64,7 +64,7 @@ export function registerCommandTools(
     {
       title: "Readarr: Search Books",
       description:
-        "Trigger Readarr to search indexers for one or more specific books. Async — returns the queued CommandResource.",
+        "Trigger Readarr to search indexers for one or more specific books. Async — returns the queued CommandResource. Poll status with `readarr_get_command` (use the returned id).",
       inputSchema: {
         book_ids: z
           .array(z.number().int())
