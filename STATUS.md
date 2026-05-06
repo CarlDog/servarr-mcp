@@ -4,12 +4,16 @@
 
 ## Phase
 
-Test infrastructure stood up alongside the catalog hygiene pass.
-Vitest with 19 unit tests across 5 files covers the bug-prone
-paths: grab_release mapped-id fix-up, release_search guards,
-withProgress lifecycle, and an annotation-coverage walk that
-catches future drift if a new tool ships without MCP hints. CI
-matrix (ubuntu/windows/macos × node 22) runs them on every push.
+Test infrastructure rounded out: 19 unit tests + 40 read-only
+integration tests against the real *arr instances, gated on env
+vars so CI silently skips integration when creds aren't present.
+Unit tests cover the bug-prone paths (grab_release mapped-id
+fix-up, release_search guards, withProgress lifecycle, annotation-
+coverage walk that catches future drift). Integration tests cover
+the public read methods on each ServarrClient: health, diskspace,
+list/get/lookup, paged queue+history, wanted, profile listings,
+prowlarr indexer status. CI matrix (ubuntu/windows/macos × node
+22) green throughout. Locally: 59 tests in ~5s.
 
 Catalog hygiene: every tool carries MCP `annotations`
 (readOnlyHint / destructiveHint / idempotentHint / openWorldHint)
@@ -426,7 +430,38 @@ reasons populated (releases were rejected because user already has
 preferred files on disk — expected behavior). Readarr's ships in
 code but is disabled on the deploy.
 
-## Done (test infrastructure)
+## Done (test infrastructure — integration tests)
+
+40 read-only integration tests across Sonarr / Radarr / Lidarr /
+Prowlarr added on top of the unit suite. Each suite gates on its
+app's `URL` + `API_KEY` env vars via `describe.skipIf`; CI doesn't
+ship `.env` so the suites silently skip there. Locally,
+`vitest.config.ts` loads `.env` before tests run so existing creds
+Just Work.
+
+Coverage targets the public read methods: `health`, `diskspace`,
+`list_<resource>`, `lookup_<resource>` (anchored to known upstream
+ids — Princess Mononoke tmdbId=128 / imdbId=tt0119698 — to verify
+end-to-end shape), paged `queue` / `history`, `wantedMissing`,
+`qualityProfiles`, `metadataProfiles` (Lidarr), `rootFolders`,
+`tags`, and `prowlarr_indexer_status`.
+
+Excluded from this batch (deferred):
+- All write ops (`add_*` / `edit_*` / `grab_release` /
+  `queue_remove` / `history_mark_failed`) — would mutate the real
+  production library
+- `release_search` / `prowlarr_search` — slow, indexer-rate-limit-
+  sensitive; opt-in fixture pattern lands later
+- Readarr — disabled on the deploy until Goodreads is back
+
+New scripts: `npm run test:unit` (excludes integration) and
+`npm run test:integration` (just the integration files). Default
+`npm run test` still runs everything; integration suites
+auto-skip without creds.
+
+Local run total: 59 tests (19 unit + 40 integration), ~5s.
+
+## Done (test infrastructure — unit suite)
 
 Vitest stood up as the unit test framework. **19 tests across 5
 files**, ~450ms locally, wired into the existing CI matrix
@@ -657,8 +692,12 @@ Smoke tests:
    confirm whether Lidarr's lack of mapped fields just works.
    Readarr's tool ships in code but the deploy disables Readarr,
    so its real test will wait until the Goodreads upstream is back.
-2. **Add tests** once a real Servarr test target is set up (don't
-   mock).
+2. **Write integration tests + indexer-search opt-in fixture** —
+   the read-only integration suite is live (40 tests). Write ops
+   (`add_*`, `edit_*`, `grab_release`, `queue_remove`,
+   `history_mark_failed`) and indexer-hitting ops (`release_search`,
+   `prowlarr_search`) still need either a separate test instance or
+   no-op patterns to safely exercise against the real library.
 3. **Optional later additions**: `radarr_edit_collection`
    (collection-level monitoring, Radarr-specific),
    `lidarr_monitor_albums` / `readarr_monitor_books` (bulk monitor
@@ -700,9 +739,11 @@ Decisions made during scaffolding:
 
 ## Known Gaps
 
-- Unit tests live (19 tests, ~450ms, CI-gated). **Integration tests
-  against a real Servarr instance still pending** — needs a safe
-  way to expose API keys / a test instance for env-gated runs.
+- Read-only integration tests live (40 tests against the user's
+  real *arr instances, env-gated, skip cleanly in CI). **Write
+  integration tests still pending** — would need a dedicated test
+  instance or no-op patterns to safely exercise add/edit/grab
+  against a production library.
 - `lidarr_grab_release` / `readarr_grab_release` ship in code but
   haven't been verified end-to-end. Lidarr/Readarr have no `mapped*`
   fields in their ReleaseResource, so the Radarr/Sonarr-style fix
