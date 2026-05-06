@@ -143,11 +143,16 @@ opened in this directory:
   Project memories are written under the `servarr-mcp` Serena project.
   Re-onboarding isn't needed; if memories drift, update them with
   `mcp__serena__write_memory`.
-- **OpenChronicle** — registered at *local scope* for this directory
-  via `claude mcp add openchronicle -- oc mcp serve`. Effective for
-  future Claude Code sessions opened with cwd = repo root. Config lives
-  in `~/.claude.json` under the project entry — not committed.
+- **OpenChronicle** — registered at *user scope* (available in every
+  project) as an HTTP MCP at `http://127.0.0.1:18000/mcp`. The OC
+  daemon (`oc serve`) must be running for the MCP to connect; it
+  serves both the REST API and `/mcp` from the same port. Project ID
+  for this repo is `d72f0685-f417-4307-9664-7d6a66a2bc0f` — pass it
+  to `oc memory add --project-id …` and `oc memory search
+  --project-id …` to scope to servarr-mcp.
 
-If you re-clone the repo on another machine, re-register OpenChronicle
-with the same command. Serena will work automatically if it's already
-user-scoped on that machine.
+If you re-clone the repo on another machine: re-add the user-scope
+MCP entry with `claude mcp add --transport http -s user openchronicle
+http://127.0.0.1:18000/mcp` and ensure `oc serve` is running.
+Serena works automatically if it's already user-scoped on that
+machine.
