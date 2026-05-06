@@ -191,6 +191,21 @@ export class ServarrClient {
     return this.request("/wanted/cutoff", { pageSize, monitored });
   }
 
+  // GET /release with the per-app id filters (seriesId/episodeId/
+  // seasonNumber for Sonarr, movieId for Radarr, etc.). Triggers a
+  // live indexer search server-side and returns ReleaseResource[].
+  // Callers must pass at least one scoping id; an unscoped call hits
+  // every indexer with no filter, which we refuse at the tool layer.
+  async searchReleases(
+    params: Record<string, number | undefined>,
+  ): Promise<unknown> {
+    const filtered: Record<string, number> = {};
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined) filtered[k] = v;
+    }
+    return this.request("/release", filtered);
+  }
+
   // Queue an async command. Returns the CommandResource immediately
   // (id, status: "queued"); the work happens in the background. Tools
   // should NOT poll synchronously — see SERVARR-API.md § Commands.
