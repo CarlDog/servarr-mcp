@@ -4,13 +4,16 @@
 
 ## Phase
 
-Tier-2 quality-of-life batch shipped on top of Tier-1: queue
-pagination, per-resource history, Radarr direct-id lookups, and
-Lidarr trackfile listing for orphan-file reconciliation. **92 tools
-live on the NAS deploy** (Sonarr / Radarr / Lidarr / Prowlarr;
-Readarr still disabled until its Goodreads upstream is operational;
-code count is 98 including 6 Readarr-only tools that ship but don't
-register on this deploy). Code-complete
+Catalog hygiene pass: every tool now carries MCP `annotations`
+(readOnlyHint / destructiveHint / idempotentHint / openWorldHint)
+so clients can filter, safety-prompt, and reason about retry
+behavior without parsing prose. Sparse read-tool descriptions
+(list/get/lookup/calendar/health/diskspace + Prowlarr reads) got
+rewritten with disambiguation hints + cross-references. **92 tools
+live on the NAS deploy** out of **120 in code** (Sonarr 29,
+Radarr 27, Lidarr 30, Prowlarr 6, Readarr 28). Readarr's tools
+ship in code but don't register on this deploy because Readarr is
+disabled (Goodreads upstream). Code-complete
 catalogue: cross-app observability (health/diskspace), add-media
 prerequisites (list_quality_profiles, list_root_folders, list_tags,
 list_metadata_profiles for Lidarr/Readarr), wanted/missing +
@@ -415,6 +418,41 @@ Smoke-tested against the deploy: Radarr returned 18 candidates for
 reasons populated (releases were rejected because user already has
 preferred files on disk — expected behavior). Readarr's ships in
 code but is disabled on the deploy.
+
+## Done (catalog hygiene — annotations + description rewrites)
+
+With 120 tools live, agents need structured signal beyond prose to
+choose well. Two-part pass:
+
+**MCP `annotations` everywhere.** Nine reusable bundles defined in
+`ServarrClient` base, wired into all 120 `registerTool` calls:
+
+| Bundle | When | Hints |
+|--------|------|-------|
+| `ANN_READ` | reads of *arr internal state | readOnly=true |
+| `ANN_READ_EXT` | external metadata (TMDB/TVDB/MusicBrainz/Goodreads) or live indexer hits | readOnly=true, openWorld=true |
+| `ANN_ADD` | `add_<resource>` | destructive=false, idempotent=false |
+| `ANN_EDIT` | `edit_<resource>` | destructive=true (root-folder moves), idempotent=true |
+| `ANN_COMMAND` | `search_*` / `refresh_*` triggers | idempotent=true (queue-level), openWorld=true |
+| `ANN_GRAB` | `grab_release` | additive, idempotent=false (re-grab spawns dup), openWorld=true |
+| `ANN_QUEUE_REMOVE` | `queue_remove` | destructive=true (can delete file), idempotent=true |
+| `ANN_QUEUE_REGRAB` | `queue_regrab` | idempotent=false |
+| `ANN_MARK_FAILED` | `history_mark_failed` | destructive=true (downstream re-grab/replace), idempotent=true |
+
+**Description rewrites** on the previously-sparse read tools:
+list/get/lookup/calendar/health/diskspace and Prowlarr's reads.
+Each rewritten with "what / when to use / which related tools to
+consider next" prose. Disambiguates list_X ↔ get_X ↔ lookup_X,
+points health-summary tools to `prowlarr_indexer_status` for
+actionable detail, and reinforces external-metadata vs
+library-tracked distinction (`*_lookup_*` searches the upstream
+catalogue, not your library).
+
+Visibility caveat (consistent with the earlier progress-notification
+note): Claude Code today doesn't expose annotations to the
+user-visible UI directly, but they're spec-compliant metadata that
+any annotation-aware client (or future Claude Code) will use for
+filtering and safety prompts.
 
 ## Done (Tier 2 — quality-of-life)
 
