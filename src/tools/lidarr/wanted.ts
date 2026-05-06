@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { ANN_READ, asText } from "../../clients/base.js";
 import type { LidarrClient } from "../../clients/lidarr.js";
 
 export function registerWantedTools(
@@ -26,6 +26,7 @@ export function registerWantedTools(
           .optional()
           .describe("Only monitored items (default true)"),
       },
+      annotations: ANN_READ,
     },
     async ({ page_size, monitored }) =>
       asText(await lidarr.wantedMissing(page_size, monitored)),
@@ -50,6 +51,7 @@ export function registerWantedTools(
           .optional()
           .describe("Only monitored items (default true)"),
       },
+      annotations: ANN_READ,
     },
     async ({ page_size, monitored }) =>
       asText(await lidarr.wantedCutoff(page_size, monitored)),

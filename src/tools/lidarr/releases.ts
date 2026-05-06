@@ -1,6 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText, withProgress } from "../../clients/base.js";
+import {
+  ANN_GRAB,
+  ANN_READ_EXT,
+  asText,
+  withProgress,
+} from "../../clients/base.js";
 import type { LidarrClient } from "../../clients/lidarr.js";
 
 export function registerReleaseTools(
@@ -29,6 +34,7 @@ export function registerReleaseTools(
             "Lidarr album id (from lidarr_list_albums). Scopes to a single album.",
           ),
       },
+      annotations: ANN_READ_EXT,
     },
     async ({ artist_id, album_id }, extra) => {
       if (artist_id === undefined && album_id === undefined) {
@@ -76,6 +82,7 @@ export function registerReleaseTools(
             "Force-grab a release even if the quality profile rejected it (default false). Mirrors Lidarr's UI 'Override and Download' button.",
           ),
       },
+      annotations: ANN_GRAB,
     },
     async ({ release, should_override = false }) => {
       const body: Record<string, unknown> = { ...release };

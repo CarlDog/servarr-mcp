@@ -1,6 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText, withProgress } from "../../clients/base.js";
+import {
+  ANN_GRAB,
+  ANN_READ_EXT,
+  asText,
+  withProgress,
+} from "../../clients/base.js";
 import type { ReadarrClient } from "../../clients/readarr.js";
 
 export function registerReleaseTools(
@@ -29,6 +34,7 @@ export function registerReleaseTools(
             "Readarr book id (from readarr_list_books). Scopes to a single book.",
           ),
       },
+      annotations: ANN_READ_EXT,
     },
     async ({ author_id, book_id }, extra) => {
       if (author_id === undefined && book_id === undefined) {
@@ -76,6 +82,7 @@ export function registerReleaseTools(
             "Force-grab a release even if the quality profile rejected it (default false). Mirrors Readarr's UI 'Override and Download' button.",
           ),
       },
+      annotations: ANN_GRAB,
     },
     async ({ release, should_override = false }) => {
       const body: Record<string, unknown> = { ...release };

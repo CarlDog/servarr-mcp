@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { ANN_COMMAND, ANN_READ, asText } from "../../clients/base.js";
 import type { ReadarrClient } from "../../clients/readarr.js";
 
 export function registerCommandTools(
@@ -14,6 +14,7 @@ export function registerCommandTools(
       description:
         "Trigger Readarr to search indexers for all monitored, missing books. Async — returns the queued CommandResource (id, status); the actual search runs in the background. Poll Readarr's UI or query the queue tools to see results.",
       inputSchema: {},
+      annotations: ANN_COMMAND,
     },
     async () => asText(await readarr.triggerCommand("MissingBookSearch")),
   );
@@ -30,6 +31,7 @@ export function registerCommandTools(
           .int()
           .describe("The Readarr author ID to refresh."),
       },
+      annotations: ANN_COMMAND,
     },
     async ({ author_id }) =>
       asText(
@@ -49,6 +51,7 @@ export function registerCommandTools(
           .int()
           .describe("The Readarr author ID to search."),
       },
+      annotations: ANN_COMMAND,
     },
     async ({ author_id }) =>
       asText(
@@ -68,6 +71,7 @@ export function registerCommandTools(
           .min(1)
           .describe("One or more Readarr book IDs to search."),
       },
+      annotations: ANN_COMMAND,
     },
     async ({ book_ids }) =>
       asText(await readarr.triggerCommand("BookSearch", { bookIds: book_ids })),
@@ -87,6 +91,7 @@ export function registerCommandTools(
             "The command id returned by the trigger tool (CommandResource.id).",
           ),
       },
+      annotations: ANN_READ,
     },
     async ({ id }) => asText(await readarr.getCommand(id)),
   );

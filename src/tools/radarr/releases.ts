@@ -1,6 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText, withProgress } from "../../clients/base.js";
+import {
+  ANN_GRAB,
+  ANN_READ_EXT,
+  asText,
+  withProgress,
+} from "../../clients/base.js";
 import type { RadarrClient } from "../../clients/radarr.js";
 
 export function registerReleaseTools(
@@ -19,6 +24,7 @@ export function registerReleaseTools(
           .int()
           .describe("The Radarr movie id (from radarr_list_movies)."),
       },
+      annotations: ANN_READ_EXT,
     },
     async ({ movie_id }, extra) =>
       withProgress(
@@ -53,6 +59,7 @@ export function registerReleaseTools(
             "Force-grab a release even if the quality profile rejected it (default false). Mirrors Radarr's UI 'Override and Download' button.",
           ),
       },
+      annotations: ANN_GRAB,
     },
     async ({ release, should_override = false }) => {
       const body: Record<string, unknown> = { ...release };

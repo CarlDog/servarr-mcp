@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { ANN_COMMAND, ANN_READ, asText } from "../../clients/base.js";
 import type { LidarrClient } from "../../clients/lidarr.js";
 
 export function registerCommandTools(
@@ -14,6 +14,7 @@ export function registerCommandTools(
       description:
         "Trigger Lidarr to search indexers for all monitored, missing albums. Async — returns the queued CommandResource (id, status); the actual search runs in the background. Poll Lidarr's UI or query the queue tools to see results.",
       inputSchema: {},
+      annotations: ANN_COMMAND,
     },
     async () => asText(await lidarr.triggerCommand("MissingAlbumSearch")),
   );
@@ -30,6 +31,7 @@ export function registerCommandTools(
           .int()
           .describe("The Lidarr artist ID to refresh."),
       },
+      annotations: ANN_COMMAND,
     },
     async ({ artist_id }) =>
       asText(
@@ -46,6 +48,7 @@ export function registerCommandTools(
       inputSchema: {
         artist_id: z.number().int().describe("The Lidarr artist ID to search."),
       },
+      annotations: ANN_COMMAND,
     },
     async ({ artist_id }) =>
       asText(
@@ -65,6 +68,7 @@ export function registerCommandTools(
           .min(1)
           .describe("One or more Lidarr album IDs to search."),
       },
+      annotations: ANN_COMMAND,
     },
     async ({ album_ids }) =>
       asText(
@@ -86,6 +90,7 @@ export function registerCommandTools(
             "The command id returned by the trigger tool (CommandResource.id).",
           ),
       },
+      annotations: ANN_READ,
     },
     async ({ id }) => asText(await lidarr.getCommand(id)),
   );

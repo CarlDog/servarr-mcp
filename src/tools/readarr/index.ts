@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { ANN_READ, ANN_READ_EXT, asText } from "../../clients/base.js";
 import type { ReadarrClient } from "../../clients/readarr.js";
 import { registerAuthorTools } from "./authors.js";
 import { registerCommandTools } from "./commands.js";
@@ -17,8 +17,10 @@ export function registerReadarrTools(
     "readarr_list_authors",
     {
       title: "Readarr: List Authors",
-      description: "List all authors tracked by Readarr.",
+      description:
+        "List every author tracked by Readarr (id, name, monitored state, book counts). Use to scan or filter the library; for one specific author use `readarr_get_author`. To find an author NOT yet tracked, use `readarr_lookup_author` (Goodreads metadata).",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await readarr.listAuthors()),
   );
@@ -27,8 +29,10 @@ export function registerReadarrTools(
     "readarr_get_author",
     {
       title: "Readarr: Get Author",
-      description: "Get details for a specific Readarr author by ID.",
+      description:
+        "Get full details for a Readarr author by id — overview, monitored state, statistics, books. Drill-down companion to `readarr_list_authors` and `readarr_lookup_author`.",
       inputSchema: { id: z.number().int().describe("The Readarr author ID") },
+      annotations: ANN_READ,
     },
     async ({ id }) => asText(await readarr.getAuthor(id)),
   );
@@ -36,9 +40,11 @@ export function registerReadarrTools(
   server.registerTool(
     "readarr_lookup_author",
     {
-      title: "Readarr: Lookup Author",
-      description: "Search for a new author to add to Readarr.",
+      title: "Readarr: Lookup Author (Goodreads)",
+      description:
+        "Fuzzy search Goodreads for an author to potentially add. Returns AuthorResource with `foreignAuthorId` etc., suitable for `readarr_add_author`. Searches Goodreads's catalogue, NOT your tracked library — use `readarr_list_authors` / `readarr_get_author` for what's already tracked. Note: Goodreads metadata source has known reliability issues; expect occasional lookup failures.",
       inputSchema: { term: z.string().describe("Search term") },
+      annotations: ANN_READ_EXT,
     },
     async ({ term }) => asText(await readarr.lookupAuthor(term)),
   );
@@ -48,7 +54,7 @@ export function registerReadarrTools(
     {
       title: "Readarr: List Books",
       description:
-        "List books tracked by Readarr, optionally filtered to a single author.",
+        "List books tracked by Readarr, optionally filtered to a single author. Returns book ids you can drill into with `readarr_get_book` or pass to `readarr_release_search`.",
       inputSchema: {
         author_id: z
           .number()
@@ -56,6 +62,7 @@ export function registerReadarrTools(
           .optional()
           .describe("Optional author ID filter"),
       },
+      annotations: ANN_READ,
     },
     async ({ author_id }) => asText(await readarr.listBooks(author_id)),
   );
@@ -69,6 +76,7 @@ export function registerReadarrTools(
       inputSchema: {
         id: z.number().int().describe("The Readarr book ID"),
       },
+      annotations: ANN_READ,
     },
     async ({ id }) => asText(await readarr.getBook(id)),
   );
@@ -78,8 +86,9 @@ export function registerReadarrTools(
     {
       title: "Readarr: Health",
       description:
-        "Get aggregated Readarr health warnings (indexer down, low disk, etc.).",
+        "Get aggregated Readarr health warnings (indexer down, low disk, etc.). Summary view; for actionable per-indexer failure detail use `prowlarr_indexer_status`.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await readarr.health()),
   );
@@ -89,8 +98,9 @@ export function registerReadarrTools(
     {
       title: "Readarr: Disk Space",
       description:
-        "Get per-mount disk space (free/total bytes) seen by Readarr.",
+        "Get per-mount disk space (free/total bytes) seen by Readarr. Useful for 'where do I have room to add this?' decisions; pair with `readarr_list_root_folders` to map paths to capacity.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await readarr.diskspace()),
   );
@@ -102,6 +112,7 @@ export function registerReadarrTools(
       description:
         "List Readarr quality profiles. The `id` is required as `qualityProfileId` when adding an author.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await readarr.qualityProfiles()),
   );
@@ -113,6 +124,7 @@ export function registerReadarrTools(
       description:
         "List Readarr metadata profiles (controls which editions/books from an author qualify — minPopularity, skipMissingDate, skipMissingIsbn, allowedLanguages, minPages, etc.). The `id` is required as `metadataProfileId` when adding an author.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await readarr.metadataProfiles()),
   );
@@ -124,6 +136,7 @@ export function registerReadarrTools(
       description:
         "List Readarr root folders (where books are stored on disk). The `path` is required as `rootFolderPath` when adding an author.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await readarr.rootFolders()),
   );
@@ -135,6 +148,7 @@ export function registerReadarrTools(
       description:
         "List Readarr tags (label + id pairs). Useful for scoping queries by tag and for setting tag ids on add/edit operations.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await readarr.tags()),
   );

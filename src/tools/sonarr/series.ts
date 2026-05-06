@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { ANN_ADD, ANN_EDIT, asText } from "../../clients/base.js";
 import type { SonarrClient } from "../../clients/sonarr.js";
 
 // Sonarr's MonitorType — values that make sense to expose. Omitting
@@ -61,6 +61,7 @@ export function registerSeriesTools(
             "Trigger a search for missing episodes immediately on add (default false).",
           ),
       },
+      annotations: ANN_ADD,
     },
     async ({
       tvdb_id,
@@ -135,6 +136,7 @@ export function registerSeriesTools(
           .optional()
           .describe("Replace the tag id list (full list, not append)."),
       },
+      annotations: ANN_EDIT,
     },
     async ({
       id,

@@ -1,6 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import {
+  ANN_QUEUE_REGRAB,
+  ANN_QUEUE_REMOVE,
+  ANN_READ,
+  asText,
+} from "../../clients/base.js";
 import type { ReadarrClient } from "../../clients/readarr.js";
 
 export function registerQueueTools(
@@ -28,6 +33,7 @@ export function registerQueueTools(
           .optional()
           .describe("Records per page (default 20, max 100)."),
       },
+      annotations: ANN_READ,
     },
     async ({ page, page_size }) => asText(await readarr.queue(page, page_size)),
   );
@@ -68,6 +74,7 @@ export function registerQueueTools(
             "Move the download to the recycle category in the client (if configured) instead of deleting (default false).",
           ),
       },
+      annotations: ANN_QUEUE_REMOVE,
     },
     async ({
       id,
@@ -99,6 +106,7 @@ export function registerQueueTools(
           .int()
           .describe("The Readarr queue item id (from readarr_queue)."),
       },
+      annotations: ANN_QUEUE_REGRAB,
     },
     async ({ id }) => asText(await readarr.queueRegrab(id)),
   );

@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { ANN_ADD, ANN_EDIT, asText } from "../../clients/base.js";
 import type { RadarrClient } from "../../clients/radarr.js";
 
 export function registerMovieTools(
@@ -40,6 +40,7 @@ export function registerMovieTools(
             "Trigger a search for the movie immediately on add (default false).",
           ),
       },
+      annotations: ANN_ADD,
     },
     async ({
       tmdb_id,
@@ -111,6 +112,7 @@ export function registerMovieTools(
           .optional()
           .describe("Replace the tag id list (full list, not append)."),
       },
+      annotations: ANN_EDIT,
     },
     async ({
       id,
