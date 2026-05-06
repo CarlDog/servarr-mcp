@@ -473,7 +473,17 @@ Smoke tests:
 
 ## Open Decisions
 
-None active. Decisions made during scaffolding:
+- **HTTP timeout strategy for `ServarrClient.request*`** (parked
+  2026-05-06). Currently no timeout; bare `fetch()`. Caught when a
+  Sonarr release_search for High School DxD S1 hung 5+ minutes
+  (likely a slow indexer). Endpoint SLAs vary widely — most reads
+  are sub-second, but `release_search` legitimately takes 30-60s
+  (live indexer hit). Pitched but not decided: two-tier default
+  (30s everywhere, `searchReleases` opts into 120s via
+  `AbortController` + per-call override). Revisit when timeouts
+  bite again.
+
+Decisions made during scaffolding:
 
 - **Phase 1 scope:** Sonarr, Radarr, Lidarr, Readarr, Prowlarr — Servarr
   team apps that share the v1/v3 API style. Whisparr skipped pending
