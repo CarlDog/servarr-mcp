@@ -31,4 +31,8 @@ export class ReadarrClient extends ServarrClient {
     }
     return this.request("/book", { authorId });
   }
+
+  async getBook(id: number): Promise<unknown> {
+    return this.request(`/book/${id}`);
+  }
 }

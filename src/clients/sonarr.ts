@@ -29,6 +29,10 @@ export class SonarrClient extends ServarrClient {
     return this.request("/episode", { seriesId });
   }
 
+  async getEpisode(id: number): Promise<unknown> {
+    return this.request(`/episode/${id}`);
+  }
+
   async calendar(start?: string, end?: string): Promise<unknown> {
     const params: Record<string, string> = {};
     if (start) params.start = start;

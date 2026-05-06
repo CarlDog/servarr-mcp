@@ -56,6 +56,19 @@ export function registerSonarrTools(
   );
 
   server.registerTool(
+    "sonarr_get_episode",
+    {
+      title: "Sonarr: Get Episode",
+      description:
+        "Get full details for a single Sonarr episode by ID — air date, overview, file info, monitored state, etc.",
+      inputSchema: {
+        id: z.number().int().describe("The Sonarr episode ID"),
+      },
+    },
+    async ({ id }) => asText(await sonarr.getEpisode(id)),
+  );
+
+  server.registerTool(
     "sonarr_calendar",
     {
       title: "Sonarr: Calendar",
