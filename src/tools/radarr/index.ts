@@ -100,6 +100,17 @@ export function registerRadarrTools(
     async () => asText(await radarr.rootFolders()),
   );
 
+  server.registerTool(
+    "radarr_list_tags",
+    {
+      title: "Radarr: List Tags",
+      description:
+        "List Radarr tags (label + id pairs). Useful for scoping queries by tag (e.g. 'show me everything tagged 4k') and for setting tag ids on add/edit operations.",
+      inputSchema: {},
+    },
+    async () => asText(await radarr.tags()),
+  );
+
   registerQueueTools(server, radarr);
   registerHistoryTools(server, radarr);
   registerWantedTools(server, radarr);

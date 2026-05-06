@@ -140,6 +140,10 @@ export class ServarrClient {
     return this.request("/rootfolder");
   }
 
+  async tags(): Promise<unknown> {
+    return this.request("/tag");
+  }
+
   async queue(): Promise<unknown> {
     return this.request("/queue");
   }

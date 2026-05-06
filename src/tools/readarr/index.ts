@@ -115,6 +115,17 @@ export function registerReadarrTools(
     async () => asText(await readarr.rootFolders()),
   );
 
+  server.registerTool(
+    "readarr_list_tags",
+    {
+      title: "Readarr: List Tags",
+      description:
+        "List Readarr tags (label + id pairs). Useful for scoping queries by tag and for setting tag ids on add/edit operations.",
+      inputSchema: {},
+    },
+    async () => asText(await readarr.tags()),
+  );
+
   registerQueueTools(server, readarr);
   registerHistoryTools(server, readarr);
   registerWantedTools(server, readarr);

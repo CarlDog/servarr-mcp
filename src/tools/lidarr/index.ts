@@ -115,6 +115,17 @@ export function registerLidarrTools(
     async () => asText(await lidarr.rootFolders()),
   );
 
+  server.registerTool(
+    "lidarr_list_tags",
+    {
+      title: "Lidarr: List Tags",
+      description:
+        "List Lidarr tags (label + id pairs). Useful for scoping queries by tag and for setting tag ids on add/edit operations.",
+      inputSchema: {},
+    },
+    async () => asText(await lidarr.tags()),
+  );
+
   registerQueueTools(server, lidarr);
   registerHistoryTools(server, lidarr);
   registerWantedTools(server, lidarr);
