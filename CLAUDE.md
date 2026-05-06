@@ -144,15 +144,14 @@ opened in this directory:
   Re-onboarding isn't needed; if memories drift, update them with
   `mcp__serena__write_memory`.
 - **OpenChronicle** — registered at *user scope* (available in every
-  project) as an HTTP MCP at `http://127.0.0.1:18000/mcp`. The OC
-  daemon (`oc serve`) must be running for the MCP to connect; it
-  serves both the REST API and `/mcp` from the same port. Project ID
-  for this repo is `d72f0685-f417-4307-9664-7d6a66a2bc0f` — pass it
-  to `oc memory add --project-id …` and `oc memory search
-  --project-id …` to scope to servarr-mcp.
+  project) as an HTTP MCP at the canonical NAS instance:
+  `http://your-nas:18000/mcp`. Same daemon serves REST
+  (`/api/v1/*`) and MCP (`/mcp`) on one port. Project ID for this
+  repo on the NAS instance is
+  `da6af588-040d-4908-a4d2-376dd6d2d6a5` — use it with
+  `POST /api/v1/memory` (project_id field) or via the MCP tools.
 
-If you re-clone the repo on another machine: re-add the user-scope
-MCP entry with `claude mcp add --transport http -s user openchronicle
-http://127.0.0.1:18000/mcp` and ensure `oc serve` is running.
-Serena works automatically if it's already user-scoped on that
-machine.
+If you re-clone on another machine: re-add the user-scope MCP entry
+with `claude mcp add --transport http -s user openchronicle
+http://your-nas:18000/mcp`. Serena works automatically if it's
+already user-scoped on that machine.
