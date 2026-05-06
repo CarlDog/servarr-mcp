@@ -12,7 +12,7 @@ export function registerReleaseTools(
     {
       title: "Radarr: Release Search",
       description:
-        "Run a live indexer search for releases of a specific movie and return candidate ReleaseResource entries (without grabbing). Hits every enabled indexer in real time — slow and rate-limit-sensitive, so call only when the user wants to pick a release manually. Returned items feed `radarr_grab_release` (when it ships).",
+        "Run a live indexer search for releases of a specific movie and return candidate ReleaseResource entries (without grabbing). Hits every enabled indexer in real time — slow and rate-limit-sensitive, so call only when the user wants to pick a release manually. Returned items feed `radarr_grab_release`.",
       inputSchema: {
         movie_id: z
           .number()
@@ -22,5 +22,36 @@ export function registerReleaseTools(
     },
     async ({ movie_id }) =>
       asText(await radarr.searchReleases({ movieId: movie_id })),
+  );
+
+  server.registerTool(
+    "radarr_grab_release",
+    {
+      title: "Radarr: Grab Release",
+      description:
+        "HIGH RISK. Immediately queues a download from the indexer for the given release. Pass the `release` object verbatim from `radarr_release_search` output — Radarr looks the release up server-side by guid+indexerId, so the cache must still be warm (re-run release_search if the grab fails with a 'not found' error). If the release was rejected by the quality profile (e.g. wrong resolution), set `should_override` to true to grab anyway.",
+      inputSchema: {
+        release: z
+          .object({
+            guid: z.string(),
+            indexerId: z.number().int(),
+          })
+          .passthrough()
+          .describe(
+            "The ReleaseResource object returned by radarr_release_search. Pass it verbatim — guid + indexerId are what Radarr keys on; other fields ride along.",
+          ),
+        should_override: z
+          .boolean()
+          .optional()
+          .describe(
+            "Force-grab a release even if the quality profile rejected it (default false). Mirrors Radarr's UI 'Override and Download' button.",
+          ),
+      },
+    },
+    async ({ release, should_override = false }) => {
+      const body: Record<string, unknown> = { ...release };
+      if (should_override) body.shouldOverride = true;
+      return asText(await radarr.grabRelease(body));
+    },
   );
 }
