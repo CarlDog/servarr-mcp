@@ -79,6 +79,21 @@ export function registerReleaseTools(
     },
     async ({ release, should_override = false }) => {
       const body: Record<string, unknown> = { ...release };
+      // Servarr's POST /release wants seriesId + episodeIds, but
+      // GET /release returns them null with the parsed match in
+      // mappedSeriesId and mappedEpisodeInfo[].id. Copy them across
+      // unless the caller already set the direct field explicitly.
+      if (body.seriesId === undefined && body.mappedSeriesId !== undefined) {
+        body.seriesId = body.mappedSeriesId;
+      }
+      if (
+        body.episodeIds === undefined &&
+        Array.isArray(body.mappedEpisodeInfo)
+      ) {
+        body.episodeIds = (body.mappedEpisodeInfo as Array<{ id: number }>).map(
+          (e) => e.id,
+        );
+      }
       if (should_override) body.shouldOverride = true;
       return asText(await sonarr.grabRelease(body));
     },
