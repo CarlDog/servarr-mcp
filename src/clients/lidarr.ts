@@ -43,4 +43,16 @@ export class LidarrClient extends ServarrClient {
   async historyArtist(artistId: number): Promise<unknown> {
     return this.request("/history/artist", { artistId });
   }
+
+  async listTrackfiles(opts: {
+    artistId?: number;
+    albumId?: number;
+    unmapped?: boolean;
+  }): Promise<unknown> {
+    const params: Record<string, number | boolean> = {};
+    if (opts.artistId !== undefined) params.artistId = opts.artistId;
+    if (opts.albumId !== undefined) params.albumId = opts.albumId;
+    if (opts.unmapped !== undefined) params.unmapped = opts.unmapped;
+    return this.request("/trackfile", params);
+  }
 }

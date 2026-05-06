@@ -87,6 +87,41 @@ export function registerLidarrTools(
   );
 
   server.registerTool(
+    "lidarr_list_trackfiles",
+    {
+      title: "Lidarr: List Track Files",
+      description:
+        "List Lidarr track files (the actual audio files on disk). Optionally filter by artist_id, album_id, or unmapped (orphan files Lidarr knows about but hasn't matched to a track). The unmapped=true mode is the standard 'find orphans on disk' query — pairs naturally with filesystem inspection of the music root to reconcile what's on disk vs. what Lidarr is tracking.",
+      inputSchema: {
+        artist_id: z
+          .number()
+          .int()
+          .optional()
+          .describe("Optional Lidarr artist id to scope the listing."),
+        album_id: z
+          .number()
+          .int()
+          .optional()
+          .describe("Optional Lidarr album id to scope the listing."),
+        unmapped: z
+          .boolean()
+          .optional()
+          .describe(
+            "When true, return only orphan files (on disk but not linked to any track).",
+          ),
+      },
+    },
+    async ({ artist_id, album_id, unmapped }) =>
+      asText(
+        await lidarr.listTrackfiles({
+          artistId: artist_id,
+          albumId: album_id,
+          unmapped,
+        }),
+      ),
+  );
+
+  server.registerTool(
     "lidarr_health",
     {
       title: "Lidarr: Health",
