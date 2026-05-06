@@ -13,6 +13,10 @@ export class ProwlarrClient extends ServarrClient {
     return this.request("/indexerstats");
   }
 
+  async indexerStatus(): Promise<unknown> {
+    return this.request("/indexerstatus");
+  }
+
   async search(
     query: string,
     indexerIds?: number[],

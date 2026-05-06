@@ -28,6 +28,17 @@ export function registerProwlarrTools(
   );
 
   server.registerTool(
+    "prowlarr_indexer_status",
+    {
+      title: "Prowlarr: Indexer Status",
+      description:
+        "Get the failure state for indexers Prowlarr currently considers unhealthy: which indexers are disabled-until-when and why (most recent failure message). Companion to `prowlarr_health`, which only summarizes — this returns the actionable per-indexer detail. Empty list means everything is healthy.",
+      inputSchema: {},
+    },
+    async () => asText(await prowlarr.indexerStatus()),
+  );
+
+  server.registerTool(
     "prowlarr_search",
     {
       title: "Prowlarr: Search Indexers",
