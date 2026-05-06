@@ -4,7 +4,14 @@
 
 ## Phase
 
-Catalog hygiene pass: every tool now carries MCP `annotations`
+Test infrastructure stood up alongside the catalog hygiene pass.
+Vitest with 19 unit tests across 5 files covers the bug-prone
+paths: grab_release mapped-id fix-up, release_search guards,
+withProgress lifecycle, and an annotation-coverage walk that
+catches future drift if a new tool ships without MCP hints. CI
+matrix (ubuntu/windows/macos × node 22) runs them on every push.
+
+Catalog hygiene: every tool carries MCP `annotations`
 (readOnlyHint / destructiveHint / idempotentHint / openWorldHint)
 so clients can filter, safety-prompt, and reason about retry
 behavior without parsing prose. Sparse read-tool descriptions
@@ -419,6 +426,47 @@ reasons populated (releases were rejected because user already has
 preferred files on disk — expected behavior). Readarr's ships in
 code but is disabled on the deploy.
 
+## Done (test infrastructure)
+
+Vitest stood up as the unit test framework. **19 tests across 5
+files**, ~450ms locally, wired into the existing CI matrix
+(ubuntu / windows / macos × node 22).
+
+Coverage targets the bug-prone paths:
+- `asText` output shape and `withProgress` lifecycle
+  (skip-when-no-token, emit-on-timer, cleanup-on-rejection).
+- All 120 registered tools must carry MCP `annotations` consistent
+  with their category — `readOnlyHint` for reads, `destructiveHint`
+  for queue_remove / mark_failed / edit_*, `openWorldHint` for
+  external-fanout. Catches future drift where a new tool ships
+  without hints.
+- `grab_release` mapped-fix-up logic: Radarr `mappedMovieId →
+  movieId` and Sonarr `mappedSeriesId → seriesId`,
+  `mappedEpisodeInfo[].id → episodeIds`. Exact bugs we caught
+  smoke-testing Princess Mononoke and Daredevil S02E08.
+- `release_search` "at least one id" handler-level guard for
+  Sonarr / Lidarr / Readarr (Radarr's tool has the constraint at
+  the schema layer).
+
+Test helpers in `src/tools/_test_utils.ts`:
+- `CaptureServer` shadows `McpServer.registerTool` to capture
+  `(name, config, callback)` tuples; tests then invoke callbacks
+  directly with stubbed clients.
+- `fakeExtra()` builds a minimal `RequestHandlerExtra`-shaped
+  object for handler invocation outside an MCP request.
+
+CI install command: `npm install --prefer-offline --no-audit
+--no-fund` rather than `npm ci`. The Windows-generated lockfile
+omits Linux/macOS-specific optional binary peers
+(`@rollup/rollup-*` pulls in platform-specific `@emnapi/*` peers
+that `npm ci` insists on). `npm install` resolves those at install
+time gracefully.
+
+**Integration tests against a real Servarr instance deferred to a
+follow-up.** Per working-style, those should hit a real instance
+(no API mocking) — needs more thought on safe credential handling
+in dev / opt-in env-gated execution.
+
 ## Done (catalog hygiene — cross-reference audit)
 
 Wired up the implicit workflow graph across the catalog so an LLM
@@ -652,7 +700,9 @@ Decisions made during scaffolding:
 
 ## Known Gaps
 
-- No tests yet.
+- Unit tests live (19 tests, ~450ms, CI-gated). **Integration tests
+  against a real Servarr instance still pending** — needs a safe
+  way to expose API keys / a test instance for env-gated runs.
 - `lidarr_grab_release` / `readarr_grab_release` ship in code but
   haven't been verified end-to-end. Lidarr/Readarr have no `mapped*`
   fields in their ReleaseResource, so the Radarr/Sonarr-style fix
