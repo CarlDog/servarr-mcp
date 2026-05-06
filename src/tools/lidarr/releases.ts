@@ -44,4 +44,35 @@ export function registerReleaseTools(
       );
     },
   );
+
+  server.registerTool(
+    "lidarr_grab_release",
+    {
+      title: "Lidarr: Grab Release",
+      description:
+        "HIGH RISK. Immediately queues a download from the indexer for the given release. Pass the `release` object verbatim from `lidarr_release_search` output — Lidarr looks the release up server-side by guid+indexerId, so the cache must still be warm (re-run release_search if the grab fails with a 'not found' error). If the release was rejected by the quality profile, set `should_override` to true to grab anyway.",
+      inputSchema: {
+        release: z
+          .object({
+            guid: z.string(),
+            indexerId: z.number().int(),
+          })
+          .passthrough()
+          .describe(
+            "The ReleaseResource object returned by lidarr_release_search. Pass it verbatim — guid + indexerId are what Lidarr keys on; other fields ride along.",
+          ),
+        should_override: z
+          .boolean()
+          .optional()
+          .describe(
+            "Force-grab a release even if the quality profile rejected it (default false). Mirrors Lidarr's UI 'Override and Download' button.",
+          ),
+      },
+    },
+    async ({ release, should_override = false }) => {
+      const body: Record<string, unknown> = { ...release };
+      if (should_override) body.shouldOverride = true;
+      return asText(await lidarr.grabRelease(body));
+    },
+  );
 }

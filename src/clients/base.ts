@@ -206,6 +206,15 @@ export class ServarrClient {
     return this.request("/release", filtered);
   }
 
+  // POST /release. Body is a ReleaseResource — Servarr looks the
+  // release up in its in-memory cache by guid+indexerId, so the
+  // caller is expected to pass the object verbatim from
+  // searchReleases output. Cache TTL is a few minutes; if it expired
+  // the server returns an error and the caller must re-search.
+  async grabRelease(body: Record<string, unknown>): Promise<unknown> {
+    return this.requestPost("/release", body);
+  }
+
   // Queue an async command. Returns the CommandResource immediately
   // (id, status: "queued"); the work happens in the background. Tools
   // should NOT poll synchronously — see SERVARR-API.md § Commands.
