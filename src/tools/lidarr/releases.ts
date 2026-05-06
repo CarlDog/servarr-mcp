@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { asText, withProgress } from "../../clients/base.js";
 import type { LidarrClient } from "../../clients/lidarr.js";
 
 export function registerReleaseTools(
@@ -30,17 +30,25 @@ export function registerReleaseTools(
           ),
       },
     },
-    async ({ artist_id, album_id }) => {
+    async ({ artist_id, album_id }, extra) => {
       if (artist_id === undefined && album_id === undefined) {
         throw new Error(
           "lidarr_release_search requires artist_id or album_id — an unscoped /release call hits every indexer.",
         );
       }
-      return asText(
-        await lidarr.searchReleases({
-          artistId: artist_id,
-          albumId: album_id,
-        }),
+      const scope =
+        album_id !== undefined ? `album ${album_id}` : `artist ${artist_id}`;
+      return withProgress(
+        extra,
+        (s) => `Lidarr: searching indexers for ${scope}… (${s}s elapsed)`,
+        20000,
+        async () =>
+          asText(
+            await lidarr.searchReleases({
+              artistId: artist_id,
+              albumId: album_id,
+            }),
+          ),
       );
     },
   );

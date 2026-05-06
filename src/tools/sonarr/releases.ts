@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { asText, withProgress } from "../../clients/base.js";
 import type { SonarrClient } from "../../clients/sonarr.js";
 
 export function registerReleaseTools(
@@ -37,18 +37,30 @@ export function registerReleaseTools(
           ),
       },
     },
-    async ({ series_id, episode_id, season_number }) => {
+    async ({ series_id, episode_id, season_number }, extra) => {
       if (series_id === undefined && episode_id === undefined) {
         throw new Error(
           "sonarr_release_search requires series_id or episode_id — an unscoped /release call hits every indexer.",
         );
       }
-      return asText(
-        await sonarr.searchReleases({
-          seriesId: series_id,
-          episodeId: episode_id,
-          seasonNumber: season_number,
-        }),
+      const scope =
+        episode_id !== undefined
+          ? `episode ${episode_id}`
+          : season_number !== undefined
+            ? `series ${series_id} S${season_number}`
+            : `series ${series_id}`;
+      return withProgress(
+        extra,
+        (s) => `Sonarr: searching indexers for ${scope}… (${s}s elapsed)`,
+        20000,
+        async () =>
+          asText(
+            await sonarr.searchReleases({
+              seriesId: series_id,
+              episodeId: episode_id,
+              seasonNumber: season_number,
+            }),
+          ),
       );
     },
   );

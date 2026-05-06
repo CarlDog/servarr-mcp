@@ -229,3 +229,45 @@ export class ServarrClient {
 export const asText = (data: unknown) => ({
   content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
 });
+
+// Run `fn` while emitting MCP progress notifications on a timer, so the
+// caller can show liveness during a long-running upstream call. If the
+// MCP client didn't pass a progressToken in the original request,
+// notifications are skipped — there's no token to address them to.
+//
+// `extra` matches the relevant subset of the SDK's RequestHandlerExtra;
+// it's parameterized over the notification type so call sites can pass
+// the SDK's strict ServerNotification signature without coercion.
+export async function withProgress<T, N>(
+  extra: {
+    _meta?: { progressToken?: string | number };
+    sendNotification: (notification: N) => Promise<void>;
+  },
+  mkMessage: (elapsedSeconds: number) => string,
+  intervalMs: number,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const token = extra._meta?.progressToken;
+  if (token === undefined) return fn();
+
+  const start = Date.now();
+  const timer = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - start) / 1000);
+    void extra
+      .sendNotification({
+        method: "notifications/progress",
+        params: {
+          progressToken: token,
+          progress: elapsed,
+          message: mkMessage(elapsed),
+        },
+      } as N)
+      .catch(() => undefined);
+  }, intervalMs);
+
+  try {
+    return await fn();
+  } finally {
+    clearInterval(timer);
+  }
+}

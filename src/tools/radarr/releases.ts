@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { asText, withProgress } from "../../clients/base.js";
 import type { RadarrClient } from "../../clients/radarr.js";
 
 export function registerReleaseTools(
@@ -20,8 +20,14 @@ export function registerReleaseTools(
           .describe("The Radarr movie id (from radarr_list_movies)."),
       },
     },
-    async ({ movie_id }) =>
-      asText(await radarr.searchReleases({ movieId: movie_id })),
+    async ({ movie_id }, extra) =>
+      withProgress(
+        extra,
+        (s) =>
+          `Radarr: searching indexers for movie ${movie_id}… (${s}s elapsed)`,
+        20000,
+        async () => asText(await radarr.searchReleases({ movieId: movie_id })),
+      ),
   );
 
   server.registerTool(
