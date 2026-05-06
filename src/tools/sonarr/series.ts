@@ -125,7 +125,7 @@ export function registerSeriesTools(
           .string()
           .optional()
           .describe(
-            "Change the root folder. WARNING: this moves the series files on disk.",
+            "Change the root folder (from sonarr_list_root_folders). WARNING: this moves the series files on disk.",
           ),
         season_folder: z
           .boolean()
@@ -134,7 +134,9 @@ export function registerSeriesTools(
         tags: z
           .array(z.number().int())
           .optional()
-          .describe("Replace the tag id list (full list, not append)."),
+          .describe(
+            "Replace the tag id list (from sonarr_list_tags). Full replacement, not append.",
+          ),
       },
       annotations: ANN_EDIT,
     },

@@ -12,7 +12,7 @@ export function registerCommandTools(
     {
       title: "Lidarr: Search Missing Albums",
       description:
-        "Trigger Lidarr to search indexers for all monitored, missing albums. Async — returns the queued CommandResource (id, status); the actual search runs in the background. Poll Lidarr's UI or query the queue tools to see results.",
+        "Trigger Lidarr to search indexers for all monitored, missing albums. Async — returns the queued CommandResource (id, status); the actual search runs in the background. Poll status with `lidarr_get_command` (use the returned id).",
       inputSchema: {},
       annotations: ANN_COMMAND,
     },
@@ -24,7 +24,7 @@ export function registerCommandTools(
     {
       title: "Lidarr: Refresh Artist Metadata",
       description:
-        "Trigger Lidarr to re-pull metadata from MusicBrainz for one artist (discography, artwork). Async — returns the queued CommandResource.",
+        "Trigger Lidarr to re-pull metadata from MusicBrainz for one artist (discography, artwork). Async — returns the queued CommandResource. Poll status with `lidarr_get_command` (use the returned id).",
       inputSchema: {
         artist_id: z
           .number()
@@ -44,7 +44,7 @@ export function registerCommandTools(
     {
       title: "Lidarr: Search Artist",
       description:
-        "Trigger Lidarr to search indexers for all monitored, missing albums of one artist. Async — returns the queued CommandResource.",
+        "Trigger Lidarr to search indexers for all monitored, missing albums of one artist. Async — returns the queued CommandResource. Poll status with `lidarr_get_command` (use the returned id).",
       inputSchema: {
         artist_id: z.number().int().describe("The Lidarr artist ID to search."),
       },
@@ -61,7 +61,7 @@ export function registerCommandTools(
     {
       title: "Lidarr: Search Albums",
       description:
-        "Trigger Lidarr to search indexers for one or more specific albums. Async — returns the queued CommandResource.",
+        "Trigger Lidarr to search indexers for one or more specific albums. Async — returns the queued CommandResource. Poll status with `lidarr_get_command` (use the returned id).",
       inputSchema: {
         album_ids: z
           .array(z.number().int())

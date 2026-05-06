@@ -11,7 +11,8 @@ export function registerHistoryTools(
     "lidarr_history",
     {
       title: "Lidarr: History",
-      description: "Get recent Lidarr history (newest first).",
+      description:
+        "Get recent Lidarr history (newest first). For per-resource scope use `lidarr_history_artist`. To re-trigger a search for a wrong-grab event, use `lidarr_history_mark_failed`.",
       inputSchema: {
         page_size: z
           .number()
@@ -50,7 +51,9 @@ export function registerHistoryTools(
         id: z
           .number()
           .int()
-          .describe("The Lidarr history record id (from lidarr_history)."),
+          .describe(
+            "The Lidarr history record id (from lidarr_history or lidarr_history_artist).",
+          ),
       },
       annotations: ANN_MARK_FAILED,
     },

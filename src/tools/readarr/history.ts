@@ -11,7 +11,8 @@ export function registerHistoryTools(
     "readarr_history",
     {
       title: "Readarr: History",
-      description: "Get recent Readarr history (newest first).",
+      description:
+        "Get recent Readarr history (newest first). For per-resource scope use `readarr_history_author`. To re-trigger a search for a wrong-grab event, use `readarr_history_mark_failed`.",
       inputSchema: {
         page_size: z
           .number()
@@ -50,7 +51,9 @@ export function registerHistoryTools(
         id: z
           .number()
           .int()
-          .describe("The Readarr history record id (from readarr_history)."),
+          .describe(
+            "The Readarr history record id (from readarr_history or readarr_history_author).",
+          ),
       },
       annotations: ANN_MARK_FAILED,
     },

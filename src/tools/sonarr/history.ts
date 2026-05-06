@@ -11,7 +11,8 @@ export function registerHistoryTools(
     "sonarr_history",
     {
       title: "Sonarr: History",
-      description: "Get recent Sonarr history (newest first).",
+      description:
+        "Get recent Sonarr history (newest first). For per-resource scope use `sonarr_history_series`. To re-trigger a search for a wrong-grab event, use `sonarr_history_mark_failed`.",
       inputSchema: {
         page_size: z
           .number()
@@ -50,7 +51,9 @@ export function registerHistoryTools(
         id: z
           .number()
           .int()
-          .describe("The Sonarr history record id (from sonarr_history)."),
+          .describe(
+            "The Sonarr history record id (from sonarr_history or sonarr_history_series).",
+          ),
       },
       annotations: ANN_MARK_FAILED,
     },

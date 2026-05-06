@@ -12,7 +12,7 @@ export function registerWantedTools(
     {
       title: "Readarr: Wanted (Missing)",
       description:
-        "List books that are wanted but not yet downloaded. Filters to monitored items by default.",
+        "List books that are wanted but not yet downloaded. Filters to monitored items by default. Once you've identified what's missing, trigger an indexer hunt with `readarr_search_missing`.",
       inputSchema: {
         page_size: z
           .number()
@@ -37,7 +37,7 @@ export function registerWantedTools(
     {
       title: "Readarr: Wanted (Below Cutoff)",
       description:
-        "List books downloaded below cutoff quality — upgrade candidates. Filters to monitored items by default.",
+        "List books downloaded below cutoff quality — upgrade candidates. Filters to monitored items by default. Items here are upgrade candidates; trigger a re-search with `readarr_search_missing` (which also picks up cutoff-unmet items by default).",
       inputSchema: {
         page_size: z
           .number()

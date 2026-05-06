@@ -12,7 +12,7 @@ export function registerCommandTools(
     {
       title: "Radarr: Search Missing Movies",
       description:
-        "Trigger Radarr to search indexers for all monitored, missing movies. Async — returns the queued CommandResource (id, status); the actual search runs in the background. Poll Radarr's UI or query the queue tools to see results.",
+        "Trigger Radarr to search indexers for all monitored, missing movies. Async — returns the queued CommandResource (id, status); the actual search runs in the background. Poll status with `radarr_get_command` (use the returned id).",
       inputSchema: {},
       annotations: ANN_COMMAND,
     },
@@ -24,7 +24,7 @@ export function registerCommandTools(
     {
       title: "Radarr: Refresh Movie Metadata",
       description:
-        "Trigger Radarr to re-pull metadata from TMDB for one or more movies. Async — returns the queued CommandResource.",
+        "Trigger Radarr to re-pull metadata from TMDB for one or more movies. Async — returns the queued CommandResource. Poll status with `radarr_get_command` (use the returned id).",
       inputSchema: {
         movie_ids: z
           .array(z.number().int())
@@ -44,7 +44,7 @@ export function registerCommandTools(
     {
       title: "Radarr: Search Movies",
       description:
-        "Trigger Radarr to search indexers for one or more specific movies. Async — returns the queued CommandResource.",
+        "Trigger Radarr to search indexers for one or more specific movies. Async — returns the queued CommandResource. Poll status with `radarr_get_command` (use the returned id).",
       inputSchema: {
         movie_ids: z
           .array(z.number().int())

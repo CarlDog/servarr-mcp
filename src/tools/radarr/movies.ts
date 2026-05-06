@@ -99,7 +99,7 @@ export function registerMovieTools(
           .string()
           .optional()
           .describe(
-            "Change the root folder. WARNING: this moves the movie files on disk.",
+            "Change the root folder (from radarr_list_root_folders). WARNING: this moves the movie files on disk.",
           ),
         minimum_availability: z
           .enum(["tba", "announced", "inCinemas", "released", "preDB"])
@@ -110,7 +110,9 @@ export function registerMovieTools(
         tags: z
           .array(z.number().int())
           .optional()
-          .describe("Replace the tag id list (full list, not append)."),
+          .describe(
+            "Replace the tag id list (from radarr_list_tags). Full replacement, not append.",
+          ),
       },
       annotations: ANN_EDIT,
     },
