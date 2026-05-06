@@ -31,4 +31,8 @@ export class RadarrClient extends ServarrClient {
     if (end) params.end = end;
     return this.request("/calendar", params);
   }
+
+  async historyMovie(movieId: number): Promise<unknown> {
+    return this.request("/history/movie", { movieId });
+  }
 }

@@ -26,6 +26,19 @@ export function registerHistoryTools(
   );
 
   server.registerTool(
+    "radarr_history_movie",
+    {
+      title: "Radarr: Movie History",
+      description:
+        "Get history scoped to a single movie — every grab/import/upgrade/delete event. Much narrower than `radarr_history`, which is server-wide and runs into thousands of records.",
+      inputSchema: {
+        movie_id: z.number().int().describe("The Radarr movie ID."),
+      },
+    },
+    async ({ movie_id }) => asText(await radarr.historyMovie(movie_id)),
+  );
+
+  server.registerTool(
     "radarr_history_mark_failed",
     {
       title: "Radarr: Mark History Failed",

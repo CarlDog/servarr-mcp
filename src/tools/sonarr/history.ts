@@ -26,6 +26,19 @@ export function registerHistoryTools(
   );
 
   server.registerTool(
+    "sonarr_history_series",
+    {
+      title: "Sonarr: Series History",
+      description:
+        "Get history scoped to a single series — every grab/import/upgrade/delete event. Much narrower than `sonarr_history`, which is server-wide and routinely runs into hundreds of thousands of records.",
+      inputSchema: {
+        series_id: z.number().int().describe("The Sonarr series ID."),
+      },
+    },
+    async ({ series_id }) => asText(await sonarr.historySeries(series_id)),
+  );
+
+  server.registerTool(
     "sonarr_history_mark_failed",
     {
       title: "Sonarr: Mark History Failed",
