@@ -419,6 +419,21 @@ reasons populated (releases were rejected because user already has
 preferred files on disk — expected behavior). Readarr's ships in
 code but is disabled on the deploy.
 
+## Done (catalog hygiene — cross-reference audit)
+
+Wired up the implicit workflow graph across the catalog so an LLM
+choosing a tool can see which other tools feed it / are fed by it.
+Targeted, surgical updates only — left descriptions that already
+referenced their composition partners alone.
+
+| Direction | Tools updated | What was added |
+| --- | --- | --- |
+| trigger → poll | 17 (`search_*` + `refresh_*`) | "Poll status with `<app>_get_command`" |
+| server-wide → scoped + action | 4 (`<app>_history`) | points at per-resource version (`history_series`/`history_movie`/`history_artist`/`history_author`) and `<app>_history_mark_failed` |
+| inventory → action | 8 (`wanted_missing` + `wanted_cutoff`) | points at `<app>_search_missing` for the indexer hunt |
+| input → source | 4 (`history_mark_failed` id field) | per-resource history tool now listed alongside server-wide |
+| edit input → list | 8 fields across 4 edit tools | `root_folder_path` → `list_root_folders`, `tags` → `list_tags` |
+
 ## Done (catalog hygiene — annotations + description rewrites)
 
 With 120 tools live, agents need structured signal beyond prose to
