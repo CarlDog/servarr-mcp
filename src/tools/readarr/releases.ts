@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { asText, withProgress } from "../../clients/base.js";
 import type { ReadarrClient } from "../../clients/readarr.js";
 
 export function registerReleaseTools(
@@ -30,17 +30,25 @@ export function registerReleaseTools(
           ),
       },
     },
-    async ({ author_id, book_id }) => {
+    async ({ author_id, book_id }, extra) => {
       if (author_id === undefined && book_id === undefined) {
         throw new Error(
           "readarr_release_search requires author_id or book_id — an unscoped /release call hits every indexer.",
         );
       }
-      return asText(
-        await readarr.searchReleases({
-          authorId: author_id,
-          bookId: book_id,
-        }),
+      const scope =
+        book_id !== undefined ? `book ${book_id}` : `author ${author_id}`;
+      return withProgress(
+        extra,
+        (s) => `Readarr: searching indexers for ${scope}… (${s}s elapsed)`,
+        20000,
+        async () =>
+          asText(
+            await readarr.searchReleases({
+              authorId: author_id,
+              bookId: book_id,
+            }),
+          ),
       );
     },
   );
