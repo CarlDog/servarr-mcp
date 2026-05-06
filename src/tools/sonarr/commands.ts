@@ -25,7 +25,10 @@ export function registerCommandTools(
       description:
         "Trigger Sonarr to re-pull metadata from TVDB for one series (cast, episode list, artwork). Async — returns the queued CommandResource.",
       inputSchema: {
-        series_id: z.number().int().describe("The Sonarr series ID to refresh."),
+        series_id: z
+          .number()
+          .int()
+          .describe("The Sonarr series ID to refresh."),
       },
     },
     async ({ series_id }) =>
@@ -41,10 +44,7 @@ export function registerCommandTools(
       description:
         "Trigger Sonarr to search indexers for all monitored, missing episodes of one series. Async — returns the queued CommandResource.",
       inputSchema: {
-        series_id: z
-          .number()
-          .int()
-          .describe("The Sonarr series ID to search."),
+        series_id: z.number().int().describe("The Sonarr series ID to search."),
       },
     },
     async ({ series_id }) =>
@@ -60,10 +60,7 @@ export function registerCommandTools(
       description:
         "Trigger Sonarr to search indexers for one season of one series. Async — returns the queued CommandResource.",
       inputSchema: {
-        series_id: z
-          .number()
-          .int()
-          .describe("The Sonarr series ID."),
+        series_id: z.number().int().describe("The Sonarr series ID."),
         season_number: z
           .number()
           .int()

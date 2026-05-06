@@ -19,7 +19,9 @@ export function registerMovieTools(
         tmdb_id: z
           .number()
           .int()
-          .describe("The TMDB id of the movie to add (from radarr_lookup_movie)."),
+          .describe(
+            "The TMDB id of the movie to add (from radarr_lookup_movie).",
+          ),
         quality_profile_id: z
           .number()
           .int()
@@ -46,9 +48,9 @@ export function registerMovieTools(
       monitored = true,
       search_for_movie = false,
     }) => {
-      const lookup = (await radarr.lookupMovie(
-        `tmdb:${tmdb_id}`,
-      )) as Array<Record<string, unknown>>;
+      const lookup = (await radarr.lookupMovie(`tmdb:${tmdb_id}`)) as Array<
+        Record<string, unknown>
+      >;
       if (!Array.isArray(lookup) || lookup.length === 0) {
         throw new Error(
           `Radarr lookup returned no results for TMDB id ${tmdb_id}.`,

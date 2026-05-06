@@ -70,8 +70,6 @@ export function registerCommandTools(
       },
     },
     async ({ book_ids }) =>
-      asText(
-        await readarr.triggerCommand("BookSearch", { bookIds: book_ids }),
-      ),
+      asText(await readarr.triggerCommand("BookSearch", { bookIds: book_ids })),
   );
 }
