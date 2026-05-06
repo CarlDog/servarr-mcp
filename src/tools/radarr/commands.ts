@@ -55,4 +55,22 @@ export function registerCommandTools(
         await radarr.triggerCommand("MoviesSearch", { movieIds: movie_ids }),
       ),
   );
+
+  server.registerTool(
+    "radarr_get_command",
+    {
+      title: "Radarr: Get Command Status",
+      description:
+        "Poll the status of an async command queued by radarr_search_*, radarr_refresh_movie, etc. Returns the current CommandResource (status: queued|started|completed|failed, exception, started/ended timestamps).",
+      inputSchema: {
+        id: z
+          .number()
+          .int()
+          .describe(
+            "The command id returned by the trigger tool (CommandResource.id).",
+          ),
+      },
+    },
+    async ({ id }) => asText(await radarr.getCommand(id)),
+  );
 }

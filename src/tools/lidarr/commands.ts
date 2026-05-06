@@ -71,4 +71,22 @@ export function registerCommandTools(
         await lidarr.triggerCommand("AlbumSearch", { albumIds: album_ids }),
       ),
   );
+
+  server.registerTool(
+    "lidarr_get_command",
+    {
+      title: "Lidarr: Get Command Status",
+      description:
+        "Poll the status of an async command queued by lidarr_search_*, lidarr_refresh_artist, etc. Returns the current CommandResource (status: queued|started|completed|failed, exception, started/ended timestamps).",
+      inputSchema: {
+        id: z
+          .number()
+          .int()
+          .describe(
+            "The command id returned by the trigger tool (CommandResource.id).",
+          ),
+      },
+    },
+    async ({ id }) => asText(await lidarr.getCommand(id)),
+  );
 }

@@ -97,4 +97,22 @@ export function registerCommandTools(
         }),
       ),
   );
+
+  server.registerTool(
+    "sonarr_get_command",
+    {
+      title: "Sonarr: Get Command Status",
+      description:
+        "Poll the status of an async command queued by sonarr_search_*, sonarr_refresh_series, etc. Returns the current CommandResource (status: queued|started|completed|failed, exception, started/ended timestamps).",
+      inputSchema: {
+        id: z
+          .number()
+          .int()
+          .describe(
+            "The command id returned by the trigger tool (CommandResource.id).",
+          ),
+      },
+    },
+    async ({ id }) => asText(await sonarr.getCommand(id)),
+  );
 }

@@ -224,6 +224,14 @@ export class ServarrClient {
   ): Promise<unknown> {
     return this.requestPost("/command", { name, ...args });
   }
+
+  // Companion poll for triggerCommand. Returns the current
+  // CommandResource: status ("queued" / "started" / "completed" /
+  // "failed"), exception, started/ended timestamps, etc. The id comes
+  // from the triggerCommand response.
+  async getCommand(id: number): Promise<unknown> {
+    return this.request(`/command/${id}`);
+  }
 }
 
 export const asText = (data: unknown) => ({

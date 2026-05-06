@@ -72,4 +72,22 @@ export function registerCommandTools(
     async ({ book_ids }) =>
       asText(await readarr.triggerCommand("BookSearch", { bookIds: book_ids })),
   );
+
+  server.registerTool(
+    "readarr_get_command",
+    {
+      title: "Readarr: Get Command Status",
+      description:
+        "Poll the status of an async command queued by readarr_search_*, readarr_refresh_author, etc. Returns the current CommandResource (status: queued|started|completed|failed, exception, started/ended timestamps).",
+      inputSchema: {
+        id: z
+          .number()
+          .int()
+          .describe(
+            "The command id returned by the trigger tool (CommandResource.id).",
+          ),
+      },
+    },
+    async ({ id }) => asText(await readarr.getCommand(id)),
+  );
 }
