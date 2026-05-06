@@ -4,28 +4,32 @@
 
 ## Phase
 
-`grab_release` write tool shipped — the v1 write surface is now
-complete end-to-end (search → grab). **76 tools live on the NAS
-deploy** (Sonarr/Radarr/Lidarr/Prowlarr; Readarr still disabled
-until its Goodreads upstream is operational; code count is 78
-including Readarr's release_search + grab_release). Code-complete
+Tier-1 diagnostics + closure batch shipped: command-status polling,
+tag listing, prowlarr indexer-status, and single-resource
+drill-downs. **86 tools live on the NAS deploy** (Sonarr / Radarr /
+Lidarr / Prowlarr; Readarr still disabled until its Goodreads
+upstream is operational; code count is 91 including 5 Readarr-only
+tools that ship but don't register on this deploy). Code-complete
 catalogue: cross-app observability (health/diskspace), add-media
-prerequisites (list_quality_profiles, list_root_folders,
+prerequisites (list_quality_profiles, list_root_folders, list_tags,
 list_metadata_profiles for Lidarr/Readarr), wanted/missing +
-wanted/cutoff queries, full command-trigger surface (16 tools),
-add-media for the four media apps, `<app>_queue_remove` +
-`<app>_queue_regrab` for the four media apps,
-`<app>_history_mark_failed` for the four media apps,
+wanted/cutoff queries, full command-trigger surface (16 tools) +
+`<app>_get_command` poll companion, add-media for the four media
+apps, `<app>_queue_remove` + `<app>_queue_regrab` for the four
+media apps, `<app>_history_mark_failed` for the four media apps,
 `<app>_edit_<resource>` for the four media apps,
-`<app>_release_search` for the four media apps, and
+`<app>_release_search` for the four media apps,
 `<app>_grab_release` for the four media apps (Radarr + Sonarr
-verified end-to-end; Lidarr untested — see Known Gaps).
-Per-resource
-sibling files: `queue.ts`, `history.ts`, `wanted.ts`, `commands.ts`,
-`releases.ts`, plus the existing `series.ts`/`movies.ts`/
-`artists.ts`/`authors.ts`. Same-host hostname trap fixed early
-(`extra_hosts: host.docker.internal:host-gateway` in compose, env
-URLs use `http://host.docker.internal:<port>`). Deploy git-managed
+verified end-to-end; Lidarr untested — see Known Gaps),
+single-resource drill-downs (`sonarr_get_episode`,
+`lidarr_get_album`, `lidarr_get_track`, `readarr_get_book`), and
+`prowlarr_indexer_status` for actionable per-indexer failure
+detail. Per-resource sibling files: `queue.ts`, `history.ts`,
+`wanted.ts`, `commands.ts`, `releases.ts`, plus the existing
+`series.ts`/`movies.ts`/`artists.ts`/`authors.ts`. Same-host
+hostname trap fixed early (`extra_hosts:
+host.docker.internal:host-gateway` in compose, env URLs use
+`http://host.docker.internal:<port>`). Deploy git-managed
 Portainer stack id 148.
 
 ## Done
@@ -410,6 +414,38 @@ Smoke-tested against the deploy: Radarr returned 18 candidates for
 reasons populated (releases were rejected because user already has
 preferred files on disk — expected behavior). Readarr's ships in
 code but is disabled on the deploy.
+
+## Done (Tier 1 — diagnostics + closure)
+
+Four small batches shipped together to close gaps surfaced earlier
+this session. Each is a thin wrapper over an existing endpoint;
+patterns mirror the existing read-tool conventions.
+
+- **`<app>_get_command`** for Sonarr/Radarr/Lidarr/Readarr — poll
+  the CommandResource id returned by any `_search_missing` /
+  `_refresh_*` / `_search_<resource>` trigger. Status field reports
+  `queued | started | completed | failed`. Until now, there was no
+  way to confirm a queued command had actually finished.
+  Plumbing: new `getCommand(id)` on `ServarrClient` base.
+- **`<app>_list_tags`** for Sonarr/Radarr/Lidarr/Readarr — `GET
+  /tag` returns label+id pairs. Prerequisite for any future
+  tag-scoped query or tag-setting add/edit. Plumbing: new `tags()`
+  on `ServarrClient` base.
+- **`prowlarr_indexer_status`** — `GET /indexerstatus` returns
+  per-indexer failure detail (disabled-until, most-recent-failure
+  timestamp, initial-failure timestamp). Companion to the
+  summarizing `prowlarr_health`. Smoke-tested live: surfaced an
+  indexer (id 20) that has been failing since 2025-12-27 — over
+  4 months — that the user wasn't aware of.
+- **Single-resource drill-downs**: `sonarr_get_episode`,
+  `lidarr_get_album`, `lidarr_get_track`, `readarr_get_book`. One
+  GET-by-id each; companions to the existing `_list_*` tools.
+
+Smoke tests: `prowlarr_indexer_status` (returned 2 unhealthy
+indexers with timestamps, including the 4-month-old dead one) and
+`sonarr_list_tags` (returned 42 tags). The other 11 tools are
+identical patterns to existing read tools and weren't individually
+exercised.
 
 ## Done (UX — progress notifications during release_search)
 
