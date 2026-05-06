@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { ANN_MARK_FAILED, ANN_READ, asText } from "../../clients/base.js";
 import type { SonarrClient } from "../../clients/sonarr.js";
 
 export function registerHistoryTools(
@@ -21,6 +21,7 @@ export function registerHistoryTools(
           .optional()
           .describe("Records to return (default 20)"),
       },
+      annotations: ANN_READ,
     },
     async ({ page_size }) => asText(await sonarr.history(page_size)),
   );
@@ -34,6 +35,7 @@ export function registerHistoryTools(
       inputSchema: {
         series_id: z.number().int().describe("The Sonarr series ID."),
       },
+      annotations: ANN_READ,
     },
     async ({ series_id }) => asText(await sonarr.historySeries(series_id)),
   );
@@ -50,6 +52,7 @@ export function registerHistoryTools(
           .int()
           .describe("The Sonarr history record id (from sonarr_history)."),
       },
+      annotations: ANN_MARK_FAILED,
     },
     async ({ id }) => {
       await sonarr.markHistoryFailed(id);

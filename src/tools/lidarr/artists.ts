@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { ANN_ADD, ANN_EDIT, asText } from "../../clients/base.js";
 import type { LidarrClient } from "../../clients/lidarr.js";
 
 // Lidarr artist-monitor options (subset that makes sense to expose).
@@ -59,6 +59,7 @@ export function registerArtistTools(
             "Trigger a search for missing albums immediately on add (default false).",
           ),
       },
+      annotations: ANN_ADD,
     },
     async ({
       foreign_artist_id,
@@ -135,6 +136,7 @@ export function registerArtistTools(
           .optional()
           .describe("Replace the tag id list (full list, not append)."),
       },
+      annotations: ANN_EDIT,
     },
     async ({
       id,

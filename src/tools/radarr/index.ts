@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { ANN_READ, ANN_READ_EXT, asText } from "../../clients/base.js";
 import type { RadarrClient } from "../../clients/radarr.js";
 import { registerCommandTools } from "./commands.js";
 import { registerHistoryTools } from "./history.js";
@@ -17,8 +17,10 @@ export function registerRadarrTools(
     "radarr_list_movies",
     {
       title: "Radarr: List Movies",
-      description: "List all movies tracked by Radarr.",
+      description:
+        "List every movie tracked by Radarr (id, title, year, monitored state, file info). Use to scan or filter the library; for one specific movie use `radarr_get_movie`. To find a movie NOT yet tracked, use `radarr_lookup_movie` (term search), `radarr_lookup_tmdb`, or `radarr_lookup_imdb`.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await radarr.listMovies()),
   );
@@ -27,8 +29,10 @@ export function registerRadarrTools(
     "radarr_get_movie",
     {
       title: "Radarr: Get Movie",
-      description: "Get details for a specific Radarr movie by ID.",
+      description:
+        "Get full details for a Radarr movie by id — overview, ratings, file info, monitored state, collection. Drill-down companion to `radarr_list_movies` and the lookup tools.",
       inputSchema: { id: z.number().int().describe("The Radarr movie ID") },
+      annotations: ANN_READ,
     },
     async ({ id }) => asText(await radarr.getMovie(id)),
   );
@@ -37,8 +41,10 @@ export function registerRadarrTools(
     "radarr_lookup_movie",
     {
       title: "Radarr: Lookup Movie (TMDB)",
-      description: "Search TMDB for a new movie to add to Radarr.",
+      description:
+        "Fuzzy search TMDB for a movie to potentially add. Returns MovieResource with `tmdbId` etc., suitable for `radarr_add_movie`. Searches TMDB's catalogue, NOT your tracked library — use `radarr_list_movies` / `radarr_get_movie` for what's already tracked. If you already have a TMDB or IMDB id, prefer the direct `radarr_lookup_tmdb` / `radarr_lookup_imdb` to avoid fuzzy mismatch.",
       inputSchema: { term: z.string().describe("Search term") },
+      annotations: ANN_READ_EXT,
     },
     async ({ term }) => asText(await radarr.lookupMovie(term)),
   );
@@ -52,6 +58,7 @@ export function registerRadarrTools(
       inputSchema: {
         tmdb_id: z.number().int().describe("TMDB movie id"),
       },
+      annotations: ANN_READ_EXT,
     },
     async ({ tmdb_id }) => asText(await radarr.lookupTmdb(tmdb_id)),
   );
@@ -69,6 +76,7 @@ export function registerRadarrTools(
             'IMDB id including the "tt" prefix (e.g. "tt0119698" for Princess Mononoke).',
           ),
       },
+      annotations: ANN_READ_EXT,
     },
     async ({ imdb_id }) => asText(await radarr.lookupImdb(imdb_id)),
   );
@@ -77,11 +85,13 @@ export function registerRadarrTools(
     "radarr_calendar",
     {
       title: "Radarr: Calendar",
-      description: "Get upcoming movie releases from the Radarr calendar.",
+      description:
+        "Get upcoming/recent movie releases from Radarr's calendar within an ISO date window. Use for 'what's coming out this week?' queries. TV episodes live in `sonarr_calendar`; Lidarr/Readarr/Prowlarr have no calendar surface.",
       inputSchema: {
         start: z.string().optional().describe("ISO date — start of window"),
         end: z.string().optional().describe("ISO date — end of window"),
       },
+      annotations: ANN_READ,
     },
     async ({ start, end }) => asText(await radarr.calendar(start, end)),
   );
@@ -91,8 +101,9 @@ export function registerRadarrTools(
     {
       title: "Radarr: Health",
       description:
-        "Get aggregated Radarr health warnings (indexer down, low disk, etc.).",
+        "Get aggregated Radarr health warnings (indexer down, low disk, etc.). Summary view; for actionable per-indexer failure detail (which indexers, since when, why) use `prowlarr_indexer_status`.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await radarr.health()),
   );
@@ -102,8 +113,9 @@ export function registerRadarrTools(
     {
       title: "Radarr: Disk Space",
       description:
-        "Get per-mount disk space (free/total bytes) seen by Radarr.",
+        "Get per-mount disk space (free/total bytes) seen by Radarr. Useful for 'where do I have room to add this?' decisions; pair with `radarr_list_root_folders` to map paths to capacity.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await radarr.diskspace()),
   );
@@ -115,6 +127,7 @@ export function registerRadarrTools(
       description:
         "List Radarr quality profiles. The `id` is required as `qualityProfileId` when adding a movie.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await radarr.qualityProfiles()),
   );
@@ -126,6 +139,7 @@ export function registerRadarrTools(
       description:
         "List Radarr root folders (where movies are stored on disk). The `path` is required as `rootFolderPath` when adding a movie.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await radarr.rootFolders()),
   );
@@ -137,6 +151,7 @@ export function registerRadarrTools(
       description:
         "List Radarr tags (label + id pairs). Useful for scoping queries by tag (e.g. 'show me everything tagged 4k') and for setting tag ids on add/edit operations.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await radarr.tags()),
   );

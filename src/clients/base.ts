@@ -242,6 +242,97 @@ export const asText = (data: unknown) => ({
   content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
 });
 
+// MCP annotation bundles. Each tool registration passes one of these
+// in its config so clients can filter (read-only vs write), apply
+// safety prompts (destructiveHint), and reason about retry behavior
+// (idempotentHint) without parsing prose. openWorldHint is true when
+// the tool reaches beyond the configured *arr instance — TMDB/TVDB/
+// MusicBrainz/Goodreads metadata fetches, indexer searches, or
+// download-client interactions.
+
+// Read-only against the *arr instance only. No external fanout.
+export const ANN_READ = {
+  readOnlyHint: true,
+  openWorldHint: false,
+} as const;
+
+// Read against an external metadata source (TMDB / TVDB / MusicBrainz /
+// Goodreads) or live indexer query. Same readOnlyHint, but flagged
+// open-world so clients know the tool can be slow or rate-limited.
+export const ANN_READ_EXT = {
+  readOnlyHint: true,
+  openWorldHint: true,
+} as const;
+
+// Add a new tracked entity (add_series / add_movie / add_artist /
+// add_author). Not destructive (additive only); not idempotent
+// (duplicate-add errors).
+export const ANN_ADD = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: false,
+} as const;
+
+// Edit an existing tracked entity. Idempotent (re-applying same edit
+// is a no-op); destructive flag is true because root-folder changes
+// move files on disk.
+export const ANN_EDIT = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: true,
+  openWorldHint: false,
+} as const;
+
+// Async command trigger (search_missing, search_<resource>, refresh_*).
+// Idempotent at the command-queue level; the actual indexer/metadata
+// fanout makes this open-world.
+export const ANN_COMMAND = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
+} as const;
+
+// Grab a release — queues a download via the download client. Additive
+// (not destructive), but not idempotent (re-grab spawns another
+// download).
+export const ANN_GRAB = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: true,
+} as const;
+
+// Remove an item from the download queue. Can delete the file from the
+// download client (removeFromClient flag), so destructive. Removing an
+// already-removed item is a no-op → idempotent.
+export const ANN_QUEUE_REMOVE = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: true,
+  openWorldHint: true,
+} as const;
+
+// Force re-grab of a stuck queue item. Each call spawns a fresh grab,
+// so not idempotent.
+export const ANN_QUEUE_REGRAB = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: true,
+} as const;
+
+// Mark a history record failed. Triggers downstream re-search +
+// potential file replacement → flagged destructive. Already-failed
+// items stay failed → idempotent.
+export const ANN_MARK_FAILED = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: true,
+  openWorldHint: true,
+} as const;
+
 // Run `fn` while emitting MCP progress notifications on a timer, so the
 // caller can show liveness during a long-running upstream call. If the
 // MCP client didn't pass a progressToken in the original request,

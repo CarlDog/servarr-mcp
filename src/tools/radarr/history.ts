@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { ANN_MARK_FAILED, ANN_READ, asText } from "../../clients/base.js";
 import type { RadarrClient } from "../../clients/radarr.js";
 
 export function registerHistoryTools(
@@ -21,6 +21,7 @@ export function registerHistoryTools(
           .optional()
           .describe("Records to return (default 20)"),
       },
+      annotations: ANN_READ,
     },
     async ({ page_size }) => asText(await radarr.history(page_size)),
   );
@@ -34,6 +35,7 @@ export function registerHistoryTools(
       inputSchema: {
         movie_id: z.number().int().describe("The Radarr movie ID."),
       },
+      annotations: ANN_READ,
     },
     async ({ movie_id }) => asText(await radarr.historyMovie(movie_id)),
   );
@@ -50,6 +52,7 @@ export function registerHistoryTools(
           .int()
           .describe("The Radarr history record id (from radarr_history)."),
       },
+      annotations: ANN_MARK_FAILED,
     },
     async ({ id }) => {
       await radarr.markHistoryFailed(id);

@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { ANN_READ, ANN_READ_EXT, asText } from "../../clients/base.js";
 import type { LidarrClient } from "../../clients/lidarr.js";
 import { registerArtistTools } from "./artists.js";
 import { registerCommandTools } from "./commands.js";
@@ -17,8 +17,10 @@ export function registerLidarrTools(
     "lidarr_list_artists",
     {
       title: "Lidarr: List Artists",
-      description: "List all artists tracked by Lidarr.",
+      description:
+        "List every artist tracked by Lidarr (id, name, monitored state, album/track counts). Use to scan or filter the library; for one specific artist use `lidarr_get_artist`. To find an artist NOT yet tracked, use `lidarr_lookup_artist` (MusicBrainz metadata).",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await lidarr.listArtists()),
   );
@@ -27,8 +29,10 @@ export function registerLidarrTools(
     "lidarr_get_artist",
     {
       title: "Lidarr: Get Artist",
-      description: "Get details for a specific Lidarr artist by ID.",
+      description:
+        "Get full details for a Lidarr artist by id — overview, profile, monitored state, statistics. Drill-down companion to `lidarr_list_artists` and `lidarr_lookup_artist`.",
       inputSchema: { id: z.number().int().describe("The Lidarr artist ID") },
+      annotations: ANN_READ,
     },
     async ({ id }) => asText(await lidarr.getArtist(id)),
   );
@@ -36,9 +40,11 @@ export function registerLidarrTools(
   server.registerTool(
     "lidarr_lookup_artist",
     {
-      title: "Lidarr: Lookup Artist",
-      description: "Search for a new artist to add to Lidarr.",
+      title: "Lidarr: Lookup Artist (MusicBrainz)",
+      description:
+        "Fuzzy search MusicBrainz for an artist to potentially add. Returns ArtistResource with `foreignArtistId` etc., suitable for `lidarr_add_artist`. Searches MusicBrainz's catalogue, NOT your tracked library — use `lidarr_list_artists` / `lidarr_get_artist` for what's already tracked.",
       inputSchema: { term: z.string().describe("Search term") },
+      annotations: ANN_READ_EXT,
     },
     async ({ term }) => asText(await lidarr.lookupArtist(term)),
   );
@@ -48,7 +54,7 @@ export function registerLidarrTools(
     {
       title: "Lidarr: List Albums",
       description:
-        "List albums tracked by Lidarr, optionally filtered to a single artist.",
+        "List albums tracked by Lidarr, optionally filtered to a single artist. Returns album ids you can drill into with `lidarr_get_album` or pass to `lidarr_release_search`.",
       inputSchema: {
         artist_id: z
           .number()
@@ -56,6 +62,7 @@ export function registerLidarrTools(
           .optional()
           .describe("Optional artist ID filter"),
       },
+      annotations: ANN_READ,
     },
     async ({ artist_id }) => asText(await lidarr.listAlbums(artist_id)),
   );
@@ -69,6 +76,7 @@ export function registerLidarrTools(
       inputSchema: {
         id: z.number().int().describe("The Lidarr album ID"),
       },
+      annotations: ANN_READ,
     },
     async ({ id }) => asText(await lidarr.getAlbum(id)),
   );
@@ -82,6 +90,7 @@ export function registerLidarrTools(
       inputSchema: {
         id: z.number().int().describe("The Lidarr track ID"),
       },
+      annotations: ANN_READ,
     },
     async ({ id }) => asText(await lidarr.getTrack(id)),
   );
@@ -110,6 +119,7 @@ export function registerLidarrTools(
             "When true, return only orphan files (on disk but not linked to any track).",
           ),
       },
+      annotations: ANN_READ,
     },
     async ({ artist_id, album_id, unmapped }) =>
       asText(
@@ -126,8 +136,9 @@ export function registerLidarrTools(
     {
       title: "Lidarr: Health",
       description:
-        "Get aggregated Lidarr health warnings (indexer down, low disk, etc.).",
+        "Get aggregated Lidarr health warnings (indexer down, low disk, etc.). Summary view; for actionable per-indexer failure detail use `prowlarr_indexer_status`.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await lidarr.health()),
   );
@@ -137,8 +148,9 @@ export function registerLidarrTools(
     {
       title: "Lidarr: Disk Space",
       description:
-        "Get per-mount disk space (free/total bytes) seen by Lidarr.",
+        "Get per-mount disk space (free/total bytes) seen by Lidarr. Useful for 'where do I have room to add this?' decisions; pair with `lidarr_list_root_folders` to map paths to capacity.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await lidarr.diskspace()),
   );
@@ -150,6 +162,7 @@ export function registerLidarrTools(
       description:
         "List Lidarr quality profiles. The `id` is required as `qualityProfileId` when adding an artist.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await lidarr.qualityProfiles()),
   );
@@ -161,6 +174,7 @@ export function registerLidarrTools(
       description:
         "List Lidarr metadata profiles (controls which releases qualify per artist). The `id` is required as `metadataProfileId` when adding an artist.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await lidarr.metadataProfiles()),
   );
@@ -172,6 +186,7 @@ export function registerLidarrTools(
       description:
         "List Lidarr root folders (where music is stored on disk). The `path` is required as `rootFolderPath` when adding an artist.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await lidarr.rootFolders()),
   );
@@ -183,6 +198,7 @@ export function registerLidarrTools(
       description:
         "List Lidarr tags (label + id pairs). Useful for scoping queries by tag and for setting tag ids on add/edit operations.",
       inputSchema: {},
+      annotations: ANN_READ,
     },
     async () => asText(await lidarr.tags()),
   );

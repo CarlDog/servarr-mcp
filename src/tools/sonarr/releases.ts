@@ -1,6 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText, withProgress } from "../../clients/base.js";
+import {
+  ANN_GRAB,
+  ANN_READ_EXT,
+  asText,
+  withProgress,
+} from "../../clients/base.js";
 import type { SonarrClient } from "../../clients/sonarr.js";
 
 export function registerReleaseTools(
@@ -36,6 +41,7 @@ export function registerReleaseTools(
             "Season number, used with series_id to scope to a single season.",
           ),
       },
+      annotations: ANN_READ_EXT,
     },
     async ({ series_id, episode_id, season_number }, extra) => {
       if (series_id === undefined && episode_id === undefined) {
@@ -88,6 +94,7 @@ export function registerReleaseTools(
             "Force-grab a release even if the quality profile rejected it (default false). Mirrors Sonarr's UI 'Override and Download' button.",
           ),
       },
+      annotations: ANN_GRAB,
     },
     async ({ release, should_override = false }) => {
       const body: Record<string, unknown> = { ...release };

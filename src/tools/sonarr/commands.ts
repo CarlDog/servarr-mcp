@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { asText } from "../../clients/base.js";
+import { ANN_COMMAND, ANN_READ, asText } from "../../clients/base.js";
 import type { SonarrClient } from "../../clients/sonarr.js";
 
 export function registerCommandTools(
@@ -14,6 +14,7 @@ export function registerCommandTools(
       description:
         "Trigger Sonarr to search indexers for all monitored, missing episodes. Async — returns the queued CommandResource (id, status); the actual search runs in the background. Poll Sonarr's UI or query the queue tools to see results.",
       inputSchema: {},
+      annotations: ANN_COMMAND,
     },
     async () => asText(await sonarr.triggerCommand("MissingEpisodeSearch")),
   );
@@ -30,6 +31,7 @@ export function registerCommandTools(
           .int()
           .describe("The Sonarr series ID to refresh."),
       },
+      annotations: ANN_COMMAND,
     },
     async ({ series_id }) =>
       asText(
@@ -46,6 +48,7 @@ export function registerCommandTools(
       inputSchema: {
         series_id: z.number().int().describe("The Sonarr series ID to search."),
       },
+      annotations: ANN_COMMAND,
     },
     async ({ series_id }) =>
       asText(
@@ -67,6 +70,7 @@ export function registerCommandTools(
           .min(0)
           .describe("Season number (0 for specials)."),
       },
+      annotations: ANN_COMMAND,
     },
     async ({ series_id, season_number }) =>
       asText(
@@ -89,6 +93,7 @@ export function registerCommandTools(
           .min(1)
           .describe("One or more Sonarr episode IDs to search."),
       },
+      annotations: ANN_COMMAND,
     },
     async ({ episode_ids }) =>
       asText(
@@ -112,6 +117,7 @@ export function registerCommandTools(
             "The command id returned by the trigger tool (CommandResource.id).",
           ),
       },
+      annotations: ANN_READ,
     },
     async ({ id }) => asText(await sonarr.getCommand(id)),
   );
