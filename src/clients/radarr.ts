@@ -17,6 +17,14 @@ export class RadarrClient extends ServarrClient {
     return this.request("/movie/lookup", { term });
   }
 
+  async lookupTmdb(tmdbId: number): Promise<unknown> {
+    return this.request("/movie/lookup/tmdb", { tmdbId });
+  }
+
+  async lookupImdb(imdbId: string): Promise<unknown> {
+    return this.request("/movie/lookup/imdb", { imdbId });
+  }
+
   async addMovie(body: unknown): Promise<unknown> {
     return this.requestPost("/movie", body);
   }
