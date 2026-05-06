@@ -50,6 +50,12 @@ export function registerReleaseTools(
     },
     async ({ release, should_override = false }) => {
       const body: Record<string, unknown> = { ...release };
+      // Servarr's POST /release wants movieId, but GET /release returns it
+      // null and puts the parsed match in mappedMovieId. Copy it across
+      // unless the caller already set movieId explicitly.
+      if (body.movieId === undefined && body.mappedMovieId !== undefined) {
+        body.movieId = body.mappedMovieId;
+      }
       if (should_override) body.shouldOverride = true;
       return asText(await radarr.grabRelease(body));
     },
