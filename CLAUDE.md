@@ -114,6 +114,11 @@ npm install            # install deps
 npm run build          # tsc → dist/
 npm run dev            # tsx src/index.ts (requires at least one app's env vars)
 npm run typecheck      # tsc --noEmit
+npm run lint           # eslint .
+npm run format:check   # prettier --check . (or `npm run format` to fix)
+npm run test           # vitest run (unit + integration if .env present)
+npm run test:unit      # unit only (the CI-portable subset)
+npm run test:integration  # integration only (requires .env creds)
 docker build -t servarr-mcp .
 ```
 
@@ -130,9 +135,42 @@ docker build -t servarr-mcp .
 
 ## Testing
 
-No tests yet. When added, integration tests against a real Servarr
-instance behind env-gated tests (don't mock the Servarr APIs — see
-working-style note about mocked-vs-real divergence).
+Vitest. **Unit tests run in CI**; **integration tests run locally**
+when `<APP>_URL` / `<APP>_API_KEY` env vars are set (skipped silently
+otherwise via `describe.skipIf`).
+
+- `npm run test` — run everything (unit + any integration whose env
+  vars are set)
+- `npm run test:unit` — unit only
+- `npm run test:integration` — integration only
+
+Layout:
+- `src/clients/<app>.integration.test.ts` — read-only integration
+  suites. One per enabled app (Sonarr/Radarr/Lidarr/Prowlarr;
+  Readarr is deploy-disabled). Hit the real *arr instances.
+- `src/clients/base.test.ts` — unit tests for `asText` and
+  `withProgress`.
+- `src/tools/_test_utils.ts` — `CaptureServer` (shadows
+  `McpServer.registerTool` for direct handler invocation) +
+  `fakeExtra()`.
+- `src/tools/annotations.test.ts` — coverage walk: every registered
+  tool must declare MCP annotations consistent with its category.
+  Catches drift if a new tool ships without hints.
+- `src/tools/grab_release.test.ts` — `mappedMovieId → movieId` and
+  `mappedSeriesId + mappedEpisodeInfo[].id → seriesId + episodeIds`
+  fix-up logic (the bugs we caught in production grabs).
+- `src/tools/release_search.test.ts` — "at least one id" handler
+  guards (Sonarr / Lidarr / Readarr).
+
+Per working-style: don't mock the Servarr APIs. Integration tests
+hit real instances.
+
+`vitest.config.ts` loads `.env` (if present) so local runs pick up
+existing creds. CI ships no `.env` → integration suites skip.
+
+Write integration tests (add/edit/grab/queue_remove/mark_failed)
+deferred — would mutate the real production library. Needs a
+dedicated test instance or no-op patterns.
 
 ## MCP tooling (local workstation)
 
