@@ -720,6 +720,36 @@ of a bare array. Tool descriptions spell that out. Integration
 tests unaffected — they assert on `client.list*()` methods, which
 return the unmodified upstream shape.
 
+## Done (build infra — Dockerfile + publish workflow)
+
+Trying to redeploy the slim+paged tools surfaced two latent
+problems in the build pipeline. The Test workflow had been fixed
+in `25a9da0` to handle the Windows-generated lockfile (which
+omits Linux-only `@rollup/rollup-*` and `@emnapi/*` peers because
+those binaries don't install on Windows), but the same fix never
+made it to the Dockerfile or the publish workflow. First publish
+that hit it was `a3d6335` yesterday (docs-only) — failed silently;
+no one noticed until today.
+
+- **Dockerfile** (`149d92b`): switched `RUN npm ci` →
+  `RUN npm install --prefer-offline --no-audit --no-fund`. Same
+  command CI uses. Comment in the Dockerfile explains why.
+- **Publish workflow** (`f1199af`): dropped `linux/arm64` from
+  `platforms`. With `npm install` resolving peers via network,
+  arm64 via QEMU emulation hangs indefinitely (the run sat at
+  1h+ in 'Build and push' before being cancelled). amd64 native
+  builds in ~80s. Re-add arm64 when the lockfile is regenerated
+  cross-platform and we can revert the Dockerfile to `npm ci`.
+
+Deploy verified live on Portainer stack 148, ConfigHash advanced
+to `f1199af`. `docker inspect` confirmed
+`org.opencontainers.image.revision = f1199af...`, image created
+2026-05-08T22:11:35Z, healthcheck `healthy` returning the four
+enabled apps (Sonarr, Radarr, Lidarr, Prowlarr — Readarr still
+deploy-disabled), and `host.docker.internal:host-gateway` still
+mapped. `radarr_list_movies` returned a paged result over a 2283-
+movie library — the regression is gone.
+
 ## Next
 
 1. **Smoke-test `lidarr_grab_release` / `readarr_grab_release`** —
@@ -773,6 +803,16 @@ Decisions made during scaffolding:
 
 ## Known Gaps
 
+- **Lockfile is Windows-generated; cross-platform peers aren't
+  pinned.** Symptom: `npm ci` fails on Linux Docker builds with
+  `Missing: @emnapi/core@1.10.0 from lock file`. Workaround: the
+  Dockerfile and Test workflow both use `npm install` instead of
+  `npm ci`. Cost: arm64 publishes were dropped because
+  QEMU + `npm install` hangs. Proper fix: regenerate
+  `package-lock.json` from a Linux container so Linux/macOS
+  optional peers (`@rollup/rollup-linux-*`, `@emnapi/*`) land in
+  the lockfile, then revert Dockerfile + workflow to `npm ci` and
+  re-add `linux/arm64` to `platforms`.
 - Read-only integration tests live (40 tests against the user's
   real *arr instances, env-gated, skip cleanly in CI). **Write
   integration tests still pending** — would need a dedicated test
