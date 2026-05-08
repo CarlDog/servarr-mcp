@@ -2,12 +2,39 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ANN_READ, ANN_READ_EXT, asText } from "../../clients/base.js";
 import type { SonarrClient } from "../../clients/sonarr.js";
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  paginate,
+  pickFields,
+} from "../_paging.js";
 import { registerCommandTools } from "./commands.js";
 import { registerHistoryTools } from "./history.js";
 import { registerQueueTools } from "./queue.js";
 import { registerReleaseTools } from "./releases.js";
 import { registerSeriesTools } from "./series.js";
 import { registerWantedTools } from "./wanted.js";
+
+const SLIM_SERIES_FIELDS = [
+  "id",
+  "title",
+  "year",
+  "monitored",
+  "tvdbId",
+  "imdbId",
+  "tmdbId",
+  "qualityProfileId",
+  "tags",
+  "path",
+  "network",
+  "status",
+  "ended",
+  "nextAiring",
+  "previousAiring",
+  "runtime",
+  "seasonFolder",
+  "statistics",
+] as const;
 
 export function registerSonarrTools(
   server: McpServer,
@@ -17,12 +44,39 @@ export function registerSonarrTools(
     "sonarr_list_series",
     {
       title: "Sonarr: List Series",
-      description:
-        "List every TV series tracked by Sonarr (id, title, monitored state, season summary, file counts). Use to scan or filter the library; for one specific series use `sonarr_get_series`. To find a series NOT yet tracked, use `sonarr_lookup_series` (TVDB metadata).",
-      inputSchema: {},
+      description: `List TV series tracked by Sonarr as a paged result. Default returns slim fields per series (${SLIM_SERIES_FIELDS.join(", ")} — \`statistics\` carries seasonCount / episodeFileCount / episodeCount / sizeOnDisk); set verbose=true for the full SeriesResource. Sonarr's upstream /series returns the entire library in one shot — paging here is server-side. For full details on one series (including all seasons), use \`sonarr_get_series\`. To find a series NOT yet tracked, use \`sonarr_lookup_series\` (TVDB metadata).`,
+      inputSchema: {
+        page: z
+          .number()
+          .int()
+          .min(1)
+          .optional()
+          .describe("Page number, 1-indexed (default 1)."),
+        page_size: z
+          .number()
+          .int()
+          .min(1)
+          .max(MAX_PAGE_SIZE)
+          .optional()
+          .describe(
+            `Items per page (default ${DEFAULT_PAGE_SIZE}, max ${MAX_PAGE_SIZE}). If verbose=true, prefer a smaller value to stay under the MCP response cap.`,
+          ),
+        verbose: z
+          .boolean()
+          .optional()
+          .describe(
+            "Return the full SeriesResource per item (heavy: seasons[], images, alternateTitles, overview). Default false returns slim fields only.",
+          ),
+      },
       annotations: ANN_READ,
     },
-    async () => asText(await sonarr.listSeries()),
+    async ({ page = 1, page_size = DEFAULT_PAGE_SIZE, verbose = false }) => {
+      const all = (await sonarr.listSeries()) as Array<Record<string, unknown>>;
+      const projected = verbose
+        ? all
+        : all.map((s) => pickFields(s, SLIM_SERIES_FIELDS));
+      return asText(paginate(projected, page, page_size));
+    },
   );
 
   server.registerTool(

@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-05-06
+**Last updated:** 2026-05-08
 
 ## Phase
 
@@ -685,6 +685,40 @@ Smoke tests:
   equal cf_score 1700). Sonarr history showed `eventType=grabbed`,
   `releaseType=SingleEpisode`, `releaseSource=InteractiveSearch`,
   handed off to SABnzbd.
+
+## Done (size — slim+paged list tools)
+
+`radarr_list_movies` returned a tool result that exceeded the 1 MB
+MCP cap on the user's library (~2000+ movies). Radarr's `/movie`
+endpoint takes only `tmdbId` / `excludeLocalCovers` / `languageId`
+— no upstream paging or filters — so server-side projection +
+slicing is the only fix. Same shape applies to Sonarr's `/series`,
+Lidarr's `/artist`, and Lidarr's `/album` (the last with the
+recursive ArtistResource ↔ AlbumResource embedding).
+
+Four `_list_*` tools rewritten to:
+
+- Default to a slim per-item projection (id + a small set of
+  user-relevant fields; full list per tool in
+  `src/tools/<app>/index.ts`). `statistics` (small rollup) kept on
+  series/artist/album because it carries `sizeOnDisk` + completion
+  counts.
+- Accept optional `page` (default 1), `page_size` (default 50,
+  max 200) and return the standard
+  `{page, page_size, total_records, records}` shape.
+- Accept optional `verbose: true` for the full upstream resource —
+  escape hatch; drill-down `*_get_*` tools are still the preferred
+  path for one item's full shape.
+
+New shared helper `src/tools/_paging.ts` (`paginate`, `pickFields`)
+with 7 unit tests in `_paging.test.ts` covering past-end, MAX page
+size, missing fields, and falsy preservation. Total test count:
+**66** (was 59).
+
+Breaking change: the four tools now return a paged object instead
+of a bare array. Tool descriptions spell that out. Integration
+tests unaffected — they assert on `client.list*()` methods, which
+return the unmodified upstream shape.
 
 ## Next
 

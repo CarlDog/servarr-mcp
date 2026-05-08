@@ -2,12 +2,49 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ANN_READ, ANN_READ_EXT, asText } from "../../clients/base.js";
 import type { LidarrClient } from "../../clients/lidarr.js";
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  paginate,
+  pickFields,
+} from "../_paging.js";
 import { registerArtistTools } from "./artists.js";
 import { registerCommandTools } from "./commands.js";
 import { registerHistoryTools } from "./history.js";
 import { registerQueueTools } from "./queue.js";
 import { registerReleaseTools } from "./releases.js";
 import { registerWantedTools } from "./wanted.js";
+
+const SLIM_ARTIST_FIELDS = [
+  "id",
+  "artistName",
+  "monitored",
+  "mbId",
+  "foreignArtistId",
+  "qualityProfileId",
+  "metadataProfileId",
+  "tags",
+  "path",
+  "status",
+  "ended",
+  "sortName",
+  "statistics",
+] as const;
+
+const SLIM_ALBUM_FIELDS = [
+  "id",
+  "title",
+  "artistId",
+  "monitored",
+  "foreignAlbumId",
+  "profileId",
+  "albumType",
+  "secondaryTypes",
+  "releaseDate",
+  "duration",
+  "anyReleaseOk",
+  "statistics",
+] as const;
 
 export function registerLidarrTools(
   server: McpServer,
@@ -17,12 +54,41 @@ export function registerLidarrTools(
     "lidarr_list_artists",
     {
       title: "Lidarr: List Artists",
-      description:
-        "List every artist tracked by Lidarr (id, name, monitored state, album/track counts). Use to scan or filter the library; for one specific artist use `lidarr_get_artist`. To find an artist NOT yet tracked, use `lidarr_lookup_artist` (MusicBrainz metadata).",
-      inputSchema: {},
+      description: `List artists tracked by Lidarr as a paged result. Default returns slim fields per artist (${SLIM_ARTIST_FIELDS.join(", ")} — \`statistics\` carries albumCount / trackFileCount / sizeOnDisk); set verbose=true for the full ArtistResource. Lidarr's upstream /artist returns the entire library in one shot AND embeds full nextAlbum / lastAlbum AlbumResources per artist — paging + projection here keeps that recursive blowup off the wire. For full details on one artist, use \`lidarr_get_artist\`. To find an artist NOT yet tracked, use \`lidarr_lookup_artist\` (MusicBrainz metadata).`,
+      inputSchema: {
+        page: z
+          .number()
+          .int()
+          .min(1)
+          .optional()
+          .describe("Page number, 1-indexed (default 1)."),
+        page_size: z
+          .number()
+          .int()
+          .min(1)
+          .max(MAX_PAGE_SIZE)
+          .optional()
+          .describe(
+            `Items per page (default ${DEFAULT_PAGE_SIZE}, max ${MAX_PAGE_SIZE}). If verbose=true, prefer a smaller value to stay under the MCP response cap.`,
+          ),
+        verbose: z
+          .boolean()
+          .optional()
+          .describe(
+            "Return the full ArtistResource per item (heavy: nextAlbum, lastAlbum, images, members, links, overview). Default false returns slim fields only.",
+          ),
+      },
       annotations: ANN_READ,
     },
-    async () => asText(await lidarr.listArtists()),
+    async ({ page = 1, page_size = DEFAULT_PAGE_SIZE, verbose = false }) => {
+      const all = (await lidarr.listArtists()) as Array<
+        Record<string, unknown>
+      >;
+      const projected = verbose
+        ? all
+        : all.map((a) => pickFields(a, SLIM_ARTIST_FIELDS));
+      return asText(paginate(projected, page, page_size));
+    },
   );
 
   server.registerTool(
@@ -53,18 +119,51 @@ export function registerLidarrTools(
     "lidarr_list_albums",
     {
       title: "Lidarr: List Albums",
-      description:
-        "List albums tracked by Lidarr, optionally filtered to a single artist. Returns album ids you can drill into with `lidarr_get_album` or pass to `lidarr_release_search`.",
+      description: `List albums tracked by Lidarr as a paged result, optionally filtered to one artist. Default returns slim fields per album (${SLIM_ALBUM_FIELDS.join(", ")} — \`statistics\` carries trackCount / trackFileCount / sizeOnDisk); set verbose=true for the full AlbumResource. AlbumResource embeds the full \`artist\` ArtistResource — projection drops it; pair with \`lidarr_list_artists\` if you need artist context. Drill into one album with \`lidarr_get_album\`.`,
       inputSchema: {
         artist_id: z
           .number()
           .int()
           .optional()
-          .describe("Optional artist ID filter"),
+          .describe("Optional artist ID filter (applied upstream)."),
+        page: z
+          .number()
+          .int()
+          .min(1)
+          .optional()
+          .describe("Page number, 1-indexed (default 1)."),
+        page_size: z
+          .number()
+          .int()
+          .min(1)
+          .max(MAX_PAGE_SIZE)
+          .optional()
+          .describe(
+            `Items per page (default ${DEFAULT_PAGE_SIZE}, max ${MAX_PAGE_SIZE}). If verbose=true, prefer a smaller value to stay under the MCP response cap.`,
+          ),
+        verbose: z
+          .boolean()
+          .optional()
+          .describe(
+            "Return the full AlbumResource per item (heavy: embedded artist, releases[], media[], images, links, overview). Default false returns slim fields only.",
+          ),
       },
       annotations: ANN_READ,
     },
-    async ({ artist_id }) => asText(await lidarr.listAlbums(artist_id)),
+    async ({
+      artist_id,
+      page = 1,
+      page_size = DEFAULT_PAGE_SIZE,
+      verbose = false,
+    }) => {
+      const all = (await lidarr.listAlbums(artist_id)) as Array<
+        Record<string, unknown>
+      >;
+      const projected = verbose
+        ? all
+        : all.map((a) => pickFields(a, SLIM_ALBUM_FIELDS));
+      return asText(paginate(projected, page, page_size));
+    },
   );
 
   server.registerTool(
