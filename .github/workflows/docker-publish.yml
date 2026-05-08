@@ -55,6 +55,10 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
+          # arm64 dropped: QEMU-emulated arm64 + npm install (which we
+          # need until the Windows-generated lockfile is regenerated
+          # cross-platform) hangs indefinitely. Re-add when the
+          # lockfile is refreshed and we can revert to `npm ci`.
+          platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
