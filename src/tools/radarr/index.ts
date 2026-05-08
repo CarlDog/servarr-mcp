@@ -2,12 +2,33 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ANN_READ, ANN_READ_EXT, asText } from "../../clients/base.js";
 import type { RadarrClient } from "../../clients/radarr.js";
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  paginate,
+  pickFields,
+} from "../_paging.js";
 import { registerCommandTools } from "./commands.js";
 import { registerHistoryTools } from "./history.js";
 import { registerMovieTools } from "./movies.js";
 import { registerQueueTools } from "./queue.js";
 import { registerReleaseTools } from "./releases.js";
 import { registerWantedTools } from "./wanted.js";
+
+const SLIM_MOVIE_FIELDS = [
+  "id",
+  "title",
+  "year",
+  "monitored",
+  "hasFile",
+  "sizeOnDisk",
+  "qualityProfileId",
+  "tags",
+  "path",
+  "imdbId",
+  "tmdbId",
+  "status",
+] as const;
 
 export function registerRadarrTools(
   server: McpServer,
@@ -17,12 +38,39 @@ export function registerRadarrTools(
     "radarr_list_movies",
     {
       title: "Radarr: List Movies",
-      description:
-        "List every movie tracked by Radarr (id, title, year, monitored state, file info). Use to scan or filter the library; for one specific movie use `radarr_get_movie`. To find a movie NOT yet tracked, use `radarr_lookup_movie` (term search), `radarr_lookup_tmdb`, or `radarr_lookup_imdb`.",
-      inputSchema: {},
+      description: `List movies tracked by Radarr as a paged result. Default returns slim fields per movie (${SLIM_MOVIE_FIELDS.join(", ")}); set verbose=true for the full MovieResource. Radarr's upstream /movie returns the entire library in one shot — paging here is server-side, so the upstream load is the same regardless of page. For full details on one movie, use \`radarr_get_movie\`. To find a movie NOT yet tracked, use \`radarr_lookup_movie\` / \`radarr_lookup_tmdb\` / \`radarr_lookup_imdb\`.`,
+      inputSchema: {
+        page: z
+          .number()
+          .int()
+          .min(1)
+          .optional()
+          .describe("Page number, 1-indexed (default 1)."),
+        page_size: z
+          .number()
+          .int()
+          .min(1)
+          .max(MAX_PAGE_SIZE)
+          .optional()
+          .describe(
+            `Items per page (default ${DEFAULT_PAGE_SIZE}, max ${MAX_PAGE_SIZE}). If verbose=true, prefer a smaller value to stay under the MCP response cap.`,
+          ),
+        verbose: z
+          .boolean()
+          .optional()
+          .describe(
+            "Return the full MovieResource per item (heavy: overview, images, ratings, movieFile.mediaInfo). Default false returns slim fields only.",
+          ),
+      },
       annotations: ANN_READ,
     },
-    async () => asText(await radarr.listMovies()),
+    async ({ page = 1, page_size = DEFAULT_PAGE_SIZE, verbose = false }) => {
+      const all = (await radarr.listMovies()) as Array<Record<string, unknown>>;
+      const projected = verbose
+        ? all
+        : all.map((m) => pickFields(m, SLIM_MOVIE_FIELDS));
+      return asText(paginate(projected, page, page_size));
+    },
   );
 
   server.registerTool(
