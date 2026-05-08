@@ -2,7 +2,10 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci
+# `npm install` not `npm ci`: the lockfile is generated on Windows
+# and omits Linux-only optional peers (@emnapi/*, @rollup/rollup-linux-*)
+# that `npm ci` insists on. Same fix as the CI workflow.
+RUN npm install --prefer-offline --no-audit --no-fund
 COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build && npm prune --omit=dev
