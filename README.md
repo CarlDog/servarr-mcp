@@ -1,5 +1,10 @@
 # servarr-mcp
 
+<!-- fleet-confidence -->
+![code confidence](https://img.shields.io/badge/code_confidence-fair-orange) <sub>· `claude-opus-4-8[1m]` · 2026-07-07 · [details](https://github.com/CarlDog/servarr-mcp/issues/2)</sub>
+<!-- /fleet-confidence -->
+
+
 An [MCP](https://modelcontextprotocol.io) server for the
 [Servarr](https://wiki.servarr.com/) stack — Sonarr, Radarr, Lidarr,
 Readarr, and Prowlarr — packaged as a Docker container. Lets an MCP
