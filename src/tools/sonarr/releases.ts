@@ -17,7 +17,7 @@ export function registerReleaseTools(
     {
       title: "Sonarr: Release Search",
       description:
-        "Run a live indexer search for releases of a specific series, season, or episode and return candidate ReleaseResource entries (without grabbing). Hits every enabled indexer in real time — slow and rate-limit-sensitive, so call only when the user wants to pick a release manually. Pass `series_id` for the whole series, `season_number` to scope to a season, or `episode_id` to scope to a single episode. At least one is required. Returned items feed `sonarr_grab_release` (when it ships).",
+        "Run a live indexer search for releases of a specific series, season, or episode and return candidate ReleaseResource entries (without grabbing). Hits every enabled indexer in real time — slow and rate-limit-sensitive, so call only when the user wants to pick a release manually. Pass `series_id` for the whole series, `season_number` to scope to a season, or `episode_id` to scope to a single episode. At least one is required. Returned items feed `sonarr_grab_release`.",
       inputSchema: {
         series_id: z
           .number()

@@ -17,7 +17,7 @@ export function registerReleaseTools(
     {
       title: "Lidarr: Release Search",
       description:
-        "Run a live indexer search for releases of a specific artist or album and return candidate ReleaseResource entries (without grabbing). Hits every enabled indexer in real time — slow and rate-limit-sensitive, so call only when the user wants to pick a release manually. At least one of `artist_id` or `album_id` is required. Returned items feed `lidarr_grab_release` (when it ships).",
+        "Run a live indexer search for releases of a specific artist or album and return candidate ReleaseResource entries (without grabbing). Hits every enabled indexer in real time — slow and rate-limit-sensitive, so call only when the user wants to pick a release manually. At least one of `artist_id` or `album_id` is required. Returned items feed `lidarr_grab_release`.",
       inputSchema: {
         artist_id: z
           .number()
