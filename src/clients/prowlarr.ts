@@ -22,12 +22,12 @@ export class ProwlarrClient extends ServarrClient {
     indexerIds?: number[],
     categories?: number[],
   ): Promise<unknown> {
-    const params: Record<string, string | number> = { query };
+    const params: Record<string, string | readonly number[]> = { query };
     if (indexerIds && indexerIds.length > 0) {
-      params.indexerIds = indexerIds.join(",");
+      params.indexerIds = indexerIds;
     }
     if (categories && categories.length > 0) {
-      params.categories = categories.join(",");
+      params.categories = categories;
     }
     return this.request("/search", params);
   }

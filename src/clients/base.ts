@@ -10,11 +10,21 @@ export class ServarrClient {
 
   protected async request<T>(
     path: string,
-    params: Record<string, string | number | boolean> = {},
+    params: Record<
+      string,
+      string | number | boolean | readonly (string | number)[]
+    > = {},
   ): Promise<T> {
     const url = new URL(this.config.apiPath + path, this.config.url);
     for (const [k, v] of Object.entries(params)) {
-      url.searchParams.set(k, String(v));
+      if (Array.isArray(v)) {
+        // Repeated keys (?k=1&k=2) — required by ASP.NET Core's default
+        // List<int> query binding; a comma-joined single value fails to
+        // parse and the filter is silently ignored server-side.
+        for (const item of v) url.searchParams.append(k, String(item));
+      } else {
+        url.searchParams.set(k, String(v));
+      }
     }
     const res = await fetch(url, {
       headers: {
