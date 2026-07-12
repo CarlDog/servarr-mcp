@@ -79,9 +79,10 @@ if (enabledApps.length === 0) {
   process.exit(1);
 }
 
-const INSTRUCTIONS = `MCP server for the Servarr stack: Sonarr (TV), Radarr (movies), Lidarr (music), Readarr (books), Prowlarr (indexer manager). Each app is optional — only the apps with both URL and API key configured will have their tools registered. Read-only as of v1; no add/remove or trigger-search yet.
+const INSTRUCTIONS = `MCP server for the Servarr stack: Sonarr (TV), Radarr (movies), Lidarr (music), Readarr (books), Prowlarr (indexer manager). Each app is optional — only the apps with both URL and API key configured will have their tools registered. Exposes both reads and writes: alongside the browse/search tools, each media app registers add/edit for tracked entities, queue management (remove / force re-grab), interactive release search + grab, history mark-failed, and async search/refresh command triggers. Prowlarr is read-only. Every tool carries MCP annotations (readOnlyHint / destructiveHint / idempotentHint) — filter on those to distinguish reads from writes.
 
 Idioms:
+- Write tools change server state (and grabs queue real downloads). Confirm with the user before invoking a write tool unless intent is unambiguous.
 - Tools are namespaced by app: sonarr_*, radarr_*, lidarr_*, readarr_*, prowlarr_*. The visible tool set tells you which apps the user actually runs.
 - Two flavors of "find": *_list_* returns items already tracked by the app (the user's library); *_lookup_* searches the upstream metadata source (TVDB / TMDB / etc.) for items not yet added — useful for "do I already have X?" vs "could I add X?".
 - *_calendar shows upcoming releases for tracked items; only Sonarr and Radarr expose it (Lidarr / Readarr / Prowlarr don't).
