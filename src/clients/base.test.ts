@@ -101,3 +101,31 @@ describe("withProgress", () => {
     }
   });
 });
+
+describe("request query serialization", () => {
+  test("array params serialize as repeated keys (ASP.NET List<int> binding)", async () => {
+    const { ProwlarrClient } = await import("./prowlarr.js");
+    let captured: URL | undefined;
+    const fetchStub = vi.fn(async (url: URL) => {
+      captured = url;
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchStub);
+    try {
+      const client = new ProwlarrClient("http://prowlarr.test:9696", "key");
+      await client.search("ubuntu", [1, 2], [2000, 5000]);
+      expect(captured).toBeDefined();
+      expect(captured?.searchParams.get("query")).toBe("ubuntu");
+      expect(captured?.searchParams.getAll("indexerIds")).toEqual(["1", "2"]);
+      expect(captured?.searchParams.getAll("categories")).toEqual([
+        "2000",
+        "5000",
+      ]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
