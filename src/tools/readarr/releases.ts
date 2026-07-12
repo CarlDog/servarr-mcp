@@ -17,7 +17,7 @@ export function registerReleaseTools(
     {
       title: "Readarr: Release Search",
       description:
-        "Run a live indexer search for releases of a specific author or book and return candidate ReleaseResource entries (without grabbing). Hits every enabled indexer in real time — slow and rate-limit-sensitive, so call only when the user wants to pick a release manually. At least one of `author_id` or `book_id` is required. Returned items feed `readarr_grab_release` (when it ships).",
+        "Run a live indexer search for releases of a specific author or book and return candidate ReleaseResource entries (without grabbing). Hits every enabled indexer in real time — slow and rate-limit-sensitive, so call only when the user wants to pick a release manually. At least one of `author_id` or `book_id` is required. Returned items feed `readarr_grab_release`.",
       inputSchema: {
         author_id: z
           .number()
