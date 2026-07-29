@@ -750,6 +750,15 @@ deploy-disabled), and `host.docker.internal:host-gateway` still
 mapped. `radarr_list_movies` returned a paged result over a 2283-
 movie library — the regression is gone.
 
+- **Dev-chain eslint 10 + SDK 1.30 audit sweep (2026-07-29).** eslint
+  ^10.8.0, @eslint/js ^10.0.1, eslint-config-prettier ^10.1.8;
+  @modelcontextprotocol/sdk ^1.30.0 with @hono/node-server 2.0.12
+  (GHSA-frvp-7c67-39w9 path-traversal moderate). npm audit 0, was 5
+  high + 2 moderate. Lockfile written with pinned npm 10.9.8 (fleet
+  npm-version-skew lesson). Verified: lint, typecheck, 134/134 tests.
+  Runtime majors (express/undici/zod/TS) stay deferred per the closed
+  npm-major PR.
+
 ## Next
 
 1. **Smoke-test `lidarr_grab_release` / `readarr_grab_release`** —
