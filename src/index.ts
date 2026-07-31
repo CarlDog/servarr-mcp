@@ -1,10 +1,8 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
-import { randomUUID } from "node:crypto";
 import express, { type Request, type Response } from "express";
+import { mountMcpHttp } from "./shared/http-transport.js";
 import { SonarrClient } from "./clients/sonarr.js";
 import { RadarrClient } from "./clients/radarr.js";
 import { LidarrClient } from "./clients/lidarr.js";
@@ -119,56 +117,42 @@ if (portStr && (port === null || Number.isNaN(port))) {
 
 if (port) {
   // HTTP transport (long-lived server, e.g. for Portainer/Compose deployment).
+  //
+  // Auth + Host/Origin allowlist + idle-session eviction are optional but
+  // strongly recommended — see MCP_AUTH_TOKEN / MCP_ALLOWED_HOSTS below.
+  // Binding loopback would NOT be a substitute for these: the container's
+  // loopback is its own, so the server binds 0.0.0.0 to be reachable at all,
+  // and a browser on the host can still reach it via DNS rebinding. See
+  // shared/http-transport.ts and reference/rules/docker-deployments.md §8.
+  const authToken = process.env.MCP_AUTH_TOKEN || undefined;
+  const allowedHosts = process.env.MCP_ALLOWED_HOSTS
+    ? process.env.MCP_ALLOWED_HOSTS.split(",")
+        .map((h) => h.trim())
+        .filter(Boolean)
+    : undefined;
+  const sessionIdleMs = process.env.MCP_SESSION_IDLE_MS
+    ? Number.parseInt(process.env.MCP_SESSION_IDLE_MS, 10)
+    : 30 * 60_000;
+
+  if (!authToken) {
+    console.error(
+      "WARNING: MCP_AUTH_TOKEN is not set — the HTTP transport accepts unauthenticated requests from anything that can reach it. This server exposes write tools (add/edit/grab/remove) across your Servarr apps. Set MCP_AUTH_TOKEN unless this is a fully trusted network.",
+    );
+  }
+  if (!allowedHosts) {
+    console.error(
+      "WARNING: MCP_ALLOWED_HOSTS is not set — the Host/Origin allowlist is disabled (open). Set it to the hostname(s) this server is reached by to block DNS-rebinding attacks from a browser on the host network.",
+    );
+  }
+
   const httpApp = express();
   httpApp.use(express.json());
 
-  const transports: Record<string, StreamableHTTPServerTransport> = {};
-
-  httpApp.all("/mcp", async (req: Request, res: Response) => {
-    try {
-      const sessionId = req.headers["mcp-session-id"] as string | undefined;
-      let transport: StreamableHTTPServerTransport;
-
-      if (sessionId && transports[sessionId]) {
-        transport = transports[sessionId];
-      } else if (
-        !sessionId &&
-        req.method === "POST" &&
-        isInitializeRequest(req.body)
-      ) {
-        transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: () => randomUUID(),
-          onsessioninitialized: (id) => {
-            transports[id] = transport;
-          },
-        });
-        transport.onclose = () => {
-          if (transport.sessionId) {
-            delete transports[transport.sessionId];
-          }
-        };
-        const server = createServer();
-        await server.connect(transport);
-      } else {
-        res.status(400).json({
-          jsonrpc: "2.0",
-          error: {
-            code: -32000,
-            message:
-              "Bad Request: missing or unknown session, or non-initialize POST",
-          },
-          id: null,
-        });
-        return;
-      }
-
-      await transport.handleRequest(req, res, req.body);
-    } catch (err) {
-      console.error("MCP request error:", err);
-      if (!res.headersSent) {
-        res.status(500).json({ error: "Internal server error" });
-      }
-    }
+  const { dispose } = mountMcpHttp(httpApp, "/mcp", {
+    createServer,
+    authToken,
+    allowedHosts,
+    sessionIdleMs,
   });
 
   httpApp.get("/health", (_req: Request, res: Response) => {
@@ -180,9 +164,17 @@ if (port) {
     });
   });
 
-  httpApp.listen(port, () => {
+  const httpServer = httpApp.listen(port, () => {
     console.error(`servarr-mcp HTTP transport listening on :${port}`);
   });
+
+  const shutdown = () => {
+    console.error("servarr-mcp: shutting down");
+    httpServer.close();
+    void dispose();
+  };
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 } else {
   // Default: stdio transport (for direct invocation by MCP clients via `docker run -i`).
   const server = createServer();

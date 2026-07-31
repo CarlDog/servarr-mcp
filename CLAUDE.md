@@ -89,11 +89,32 @@ The same image supports two transports, selected at start time:
   - `POST/GET/DELETE /mcp` — MCP Streamable HTTP per spec; per-session
     `mcp-session-id` header. Clients initialize via `POST /mcp` (no
     session header) which mints a UUID; subsequent requests reuse it.
+    Mounted via the fleet-canonical `src/shared/http-transport.ts`
+    (standard MCP-F03/MCP-S01 — hash-compared, copied verbatim, don't
+    hand-edit).
   - `GET /health` — liveness probe (used by docker healthcheck).
-    Includes the list of enabled apps for visibility.
+    Includes the list of enabled apps for visibility. Not gated by
+    auth/host checks below — it's outside the `/mcp` mount.
 
   Per-session `McpServer` instances via the `createServer()` factory;
   the enabled-apps list is computed once at startup from env vars.
+
+  **Hardening (all optional, `/mcp` only — recommended for any
+  non-fully-trusted network):**
+  - `MCP_AUTH_TOKEN` — when set, `/mcp` requires
+    `Authorization: Bearer <token>` (constant-time comparison). Unset
+    means open; the server logs a startup warning either way so the
+    posture is never silent.
+  - `MCP_ALLOWED_HOSTS` — comma-separated hostnames. When set, `/mcp`
+    rejects any request whose `Host` (or, if absent, `Origin`) header
+    doesn't match, with 403 — the actual defense against DNS
+    rebinding, since binding loopback means nothing inside a
+    container (see `docker-deployments.md` §8). Unset means open.
+  - `MCP_SESSION_IDLE_MS` — idle-session eviction threshold in ms
+    (default: 30 minutes). A long-lived container otherwise
+    accumulates every `McpServer` ever created — clients disconnect
+    without a clean session teardown far more often than they send
+    one.
 
 The two modes are mutually exclusive in a given process.
 

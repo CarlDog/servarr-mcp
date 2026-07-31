@@ -15,6 +15,11 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       MCP_PORT: "3000"
+      # Recommended on any non-fully-trusted network — see CLAUDE.md
+      # "Transport modes" for what each does. Both default to open
+      # (with a logged warning) when unset.
+      MCP_AUTH_TOKEN: "${MCP_AUTH_TOKEN:-}"
+      MCP_ALLOWED_HOSTS: "${MCP_ALLOWED_HOSTS:-}"
       SONARR_URL: "${SONARR_URL:-}"
       SONARR_API_KEY: "${SONARR_API_KEY:-}"
       RADARR_URL: "${RADARR_URL:-}"
