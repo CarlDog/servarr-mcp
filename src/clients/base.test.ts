@@ -1,6 +1,15 @@
 import { describe, expect, test, vi } from "vitest";
 import { asText, withProgress } from "./base.js";
 
+// asText always returns a single-element content array (hardcoded in its
+// implementation), so the index access is safe despite
+// noUncheckedIndexedAccess. Returns `any` (matching JSON.parse's own
+// declared type) so callers can index into the parsed shape freely.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseAsText(out: ReturnType<typeof asText>): any {
+  return JSON.parse(out.content[0]!.text);
+}
+
 describe("asText", () => {
   test("wraps data as a single text content block with pretty JSON", () => {
     const out = asText({ a: 1, b: [2, 3] });
@@ -8,6 +17,68 @@ describe("asText", () => {
       content: [
         { type: "text", text: '{\n  "a": 1,\n  "b": [\n    2,\n    3\n  ]\n}' },
       ],
+    });
+  });
+
+  describe("secret redaction", () => {
+    // Matches Prowlarr's IndexerResource -> fields: Field[] shape
+    // (docs/specs/prowlarr.json), the concrete exposure this covers:
+    // prowlarr_list_indexers previously returned each indexer's raw
+    // apiKey/passkey verbatim.
+    test("redacts a Field with privacy: apiKey nested in an array", () => {
+      const out = asText([
+        {
+          id: 1,
+          name: "MyIndexer",
+          fields: [
+            { name: "apiKey", value: "sekret-passkey-123", privacy: "apiKey" },
+            {
+              name: "baseUrl",
+              value: "https://indexer.example",
+              privacy: "normal",
+            },
+          ],
+        },
+      ]);
+      const parsed = parseAsText(out);
+      expect(parsed[0].fields[0].value).toBe("[redacted]");
+      expect(parsed[0].fields[1].value).toBe("https://indexer.example");
+      expect(parsed[0].name).toBe("MyIndexer");
+    });
+
+    test.each(["password", "apiKey", "userName"])(
+      "redacts privacy: %s",
+      (privacy) => {
+        const out = asText({
+          field: { value: "secret-value", privacy },
+        });
+        const parsed = parseAsText(out);
+        expect(parsed.field.value).toBe("[redacted]");
+      },
+    );
+
+    test("does not redact privacy: normal", () => {
+      const out = asText({
+        field: { value: "plain-value", privacy: "normal" },
+      });
+      const parsed = parseAsText(out);
+      expect(parsed.field.value).toBe("plain-value");
+    });
+
+    test("leaves objects with a value but no privacy discriminator alone", () => {
+      const out = asText({ setting: { value: "not-a-servarr-field" } });
+      const parsed = parseAsText(out);
+      expect(parsed.setting.value).toBe("not-a-servarr-field");
+    });
+
+    test("redacts at arbitrary nesting depth", () => {
+      const out = asText({
+        level1: {
+          level2: { level3: [{ value: "deep-secret", privacy: "password" }] },
+        },
+      });
+      const parsed = parseAsText(out);
+      expect(parsed.level1.level2.level3[0].value).toBe("[redacted]");
     });
   });
 });

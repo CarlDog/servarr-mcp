@@ -248,8 +248,50 @@ export class ServarrClient {
   }
 }
 
+// Servarr-team APIs (indexers, download clients, notifications, import
+// lists — anywhere a provider is configured via a Field[] schema) mark
+// sensitive fields with a `privacy` discriminator: "normal" | "password" |
+// "apiKey" | "userName". A Field object carrying one of the three
+// non-normal levels holds the actual secret in its `value` — e.g.
+// prowlarr_list_indexers returns each indexer's raw apiKey/passkey/RSS
+// key verbatim today. This walks the whole response tree (not just
+// Prowlarr) so any current or future tool returning Field-shaped data is
+// covered by the same chokepoint, per security.md's "route every
+// security-critical transform through a single chokepoint" — asText is
+// the one place every tool response passes through before it reaches the
+// model's context.
+const SENSITIVE_PRIVACY_LEVELS = new Set(["password", "apiKey", "userName"]);
+const REDACTED = "[redacted]";
+
+function redactSensitiveFields(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(redactSensitiveFields);
+  }
+  if (value !== null && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    if (
+      "value" in obj &&
+      typeof obj.privacy === "string" &&
+      SENSITIVE_PRIVACY_LEVELS.has(obj.privacy)
+    ) {
+      return { ...obj, value: REDACTED };
+    }
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      result[k] = redactSensitiveFields(v);
+    }
+    return result;
+  }
+  return value;
+}
+
 export const asText = (data: unknown) => ({
-  content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+  content: [
+    {
+      type: "text" as const,
+      text: JSON.stringify(redactSensitiveFields(data), null, 2),
+    },
+  ],
 });
 
 // MCP annotation bundles. Each tool registration passes one of these
