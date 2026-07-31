@@ -23,6 +23,15 @@ env:
   # this npm rejects, so pin both sides (here + package.json "packageManager")
   # to keep local == CI. See claude-fleet-kit fleet/lessons/npm-version-skew.
   PINNED_NPM: "10.9.8"
+
+# Default for every job that doesn't declare its own permissions block
+# (test, quality) — read-only least-privilege for the GITHUB_TOKEN
+# (CodeQL actions/missing-workflow-permissions). build-and-push below
+# needs packages: write for the GHCR push, so it keeps its own
+# job-level block, which overrides this default for that job only.
+permissions:
+  contents: read
+
 jobs:
   test:
     name: ${{ matrix.os }}
