@@ -72,6 +72,125 @@ export function registerMovieTools(
   );
 
   server.registerTool(
+    "radarr_quick_add_movie",
+    {
+      title: "Radarr: Quick Add Movie",
+      description:
+        "Search for a movie by title and add it in one call, skipping the separate radarr_lookup_movie + radarr_add_movie round trip. " +
+        "Only adds when the title search resolves to exactly one match — if the term returns multiple candidates, this tool refuses and lists them (title, year, tmdb_id) so you can either refine the search or call radarr_add_movie directly with the tmdb_id you want. Never guesses among ambiguous matches. " +
+        "quality_profile_id and root_folder_path are optional: if omitted, this tool looks them up and auto-uses the value ONLY if exactly one is configured on this Radarr instance — with more than one configured, you must specify which to use (same refuse-and-list behavior). " +
+        "Note: search_for_movie defaults to false here, same as radarr_add_movie — flip explicitly if you want an immediate indexer search.",
+      inputSchema: {
+        term: z
+          .string()
+          .describe(
+            "Movie title to search for (same as radarr_lookup_movie's term).",
+          ),
+        quality_profile_id: z
+          .number()
+          .int()
+          .optional()
+          .describe(
+            "Quality profile id. Omit to auto-use the only configured profile; required if more than one exists.",
+          ),
+        root_folder_path: z
+          .string()
+          .optional()
+          .describe(
+            "Root folder path. Omit to auto-use the only configured root folder; required if more than one exists.",
+          ),
+        monitored: z
+          .boolean()
+          .optional()
+          .describe("Track this movie for missing files (default true)."),
+        search_for_movie: z
+          .boolean()
+          .optional()
+          .describe(
+            "Trigger a search for the movie immediately on add (default false).",
+          ),
+      },
+      annotations: ANN_ADD,
+    },
+    async ({
+      term,
+      quality_profile_id,
+      root_folder_path,
+      monitored = true,
+      search_for_movie = false,
+    }) => {
+      const candidates = (await radarr.lookupMovie(term)) as Array<
+        Record<string, unknown>
+      >;
+      if (!Array.isArray(candidates) || candidates.length === 0) {
+        throw new Error(`Radarr lookup returned no results for "${term}".`);
+      }
+      if (candidates.length > 1) {
+        const list = candidates
+          .slice(0, 10)
+          .map(
+            (c) =>
+              `  - ${c.title as string} (${c.year as number}) tmdb_id=${c.tmdbId as number}`,
+          )
+          .join("\n");
+        throw new Error(
+          `"${term}" matched ${candidates.length} movies — refusing to guess. Refine your search, or call radarr_add_movie directly with the tmdb_id you want:\n${list}`,
+        );
+      }
+      const movie = candidates[0];
+
+      let qualityProfileId = quality_profile_id;
+      if (qualityProfileId === undefined) {
+        const profiles = (await radarr.qualityProfiles()) as Array<{
+          id: number;
+          name: string;
+        }>;
+        if (profiles.length !== 1) {
+          const list = profiles
+            .map((p) => `  - id=${p.id} name="${p.name}"`)
+            .join("\n");
+          throw new Error(
+            profiles.length === 0
+              ? "No quality profiles are configured on this Radarr instance — configure one first."
+              : `quality_profile_id is required: ${profiles.length} quality profiles are configured, so none can be auto-selected:\n${list}`,
+          );
+        }
+        qualityProfileId = profiles[0]!.id;
+      }
+
+      let rootFolderPath = root_folder_path;
+      if (rootFolderPath === undefined) {
+        const folders = (await radarr.rootFolders()) as Array<{
+          id: number;
+          path: string;
+        }>;
+        if (folders.length !== 1) {
+          const list = folders
+            .map((f) => `  - id=${f.id} path="${f.path}"`)
+            .join("\n");
+          throw new Error(
+            folders.length === 0
+              ? "No root folders are configured on this Radarr instance — configure one first."
+              : `root_folder_path is required: ${folders.length} root folders are configured, so none can be auto-selected:\n${list}`,
+          );
+        }
+        rootFolderPath = folders[0]!.path;
+      }
+
+      const body = {
+        ...movie,
+        qualityProfileId,
+        rootFolderPath,
+        monitored,
+        addOptions: {
+          searchForMovie: search_for_movie,
+        },
+      };
+      return asText(await radarr.addMovie(body));
+    },
+  );
+
+  server.registerTool(
     "radarr_edit_movie",
     {
       title: "Radarr: Edit Movie",
