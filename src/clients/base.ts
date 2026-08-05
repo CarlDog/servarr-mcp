@@ -1,3 +1,12 @@
+import {
+  ApiError,
+  backoffMs,
+  formatApiError,
+  parseRetryAfterMs,
+  shouldRetry,
+} from "../shared/errors.js";
+import { logger } from "../shared/log.js";
+
 export interface ServarrConfig {
   url: string;
   apiKey: string;
@@ -5,16 +14,26 @@ export interface ServarrConfig {
   appName: string;
 }
 
+// MCP-F01: every outbound request is bounded by a timeout so a hung *arr
+// instance blocks a tool call for seconds, not forever.
+const TIMEOUT_MS = 30_000;
+
+// MCP-F02: bound how many times a GET is retried on a transient upstream
+// failure. Writes (POST/PUT/DELETE) never retry — see requestOnce below.
+const MAX_RETRIES = 3;
+
+const log = logger("servarr-client");
+
 export class ServarrClient {
   constructor(protected readonly config: ServarrConfig) {}
 
-  protected async request<T>(
+  private buildUrl(
     path: string,
     params: Record<
       string,
       string | number | boolean | readonly (string | number)[]
     > = {},
-  ): Promise<T> {
+  ): URL {
     const url = new URL(this.config.apiPath + path, this.config.url);
     for (const [k, v] of Object.entries(params)) {
       if (Array.isArray(v)) {
@@ -26,24 +45,102 @@ export class ServarrClient {
         url.searchParams.set(k, String(v));
       }
     }
-    const res = await fetch(url, {
+    return url;
+  }
+
+  // The single outbound chokepoint every request method funnels through
+  // (security.md: a cross-cutting transform — here, timeout + typed errors —
+  // only protects the calls that pass through it). Applies a fresh
+  // AbortController per call, reads the body while the timeout is still
+  // armed (a response that streams slowly enough to hang forever would
+  // otherwise slip past it), and converts both transport failures and
+  // non-ok responses into a typed ApiError. Never retries itself — retry is
+  // the caller's decision (GET only, see `request` below).
+  private async requestOnce(
+    path: string,
+    url: URL,
+    init: RequestInit,
+  ): Promise<string> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(url, { ...init, signal: controller.signal });
+      const text = await res.text();
+      if (!res.ok) {
+        const retryAfterMs = parseRetryAfterMs(res.headers.get("retry-after"));
+        throw new ApiError(
+          formatApiError(
+            this.config.appName,
+            res.status,
+            res.statusText,
+            path,
+            text,
+          ),
+          { status: res.status, retryAfterMs, body: text },
+        );
+      }
+      return text;
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      if (err instanceof Error && err.name === "AbortError") {
+        throw new ApiError(
+          `${this.config.appName} request to ${path} timed out after ${TIMEOUT_MS}ms`,
+          { status: 0 },
+        );
+      }
+      throw new ApiError(
+        `${this.config.appName} network error for ${path}: ${(err as Error).message}`,
+        { status: 0 },
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  protected async request<T>(
+    path: string,
+    params: Record<
+      string,
+      string | number | boolean | readonly (string | number)[]
+    > = {},
+  ): Promise<T> {
+    const url = this.buildUrl(path, params);
+    const init: RequestInit = {
       headers: {
         "X-Api-Key": this.config.apiKey,
         Accept: "application/json",
       },
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(
-        `${this.config.appName} ${res.status} ${res.statusText} for ${path}: ${body.slice(0, 200)}`,
-      );
+    };
+    let lastErr: unknown;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const text = await this.requestOnce(path, url, init);
+        return JSON.parse(text) as T;
+      } catch (err) {
+        lastErr = err;
+        // GET is idempotent, so a 429 or transient transport/5xx failure is
+        // safe to retry — POST/PUT/DELETE are not (see below), matching
+        // MCP-F02's "idempotent-only retry".
+        if (attempt < MAX_RETRIES && shouldRetry(err, true)) {
+          const wait =
+            (err instanceof ApiError && err.retryAfterMs) || backoffMs(attempt);
+          log.warn("retrying after upstream failure", {
+            path,
+            attempt: attempt + 1,
+            waitMs: wait,
+          });
+          await new Promise((r) => setTimeout(r, wait));
+          continue;
+        }
+        throw err;
+      }
     }
-    return (await res.json()) as T;
+    throw lastErr;
   }
 
   protected async requestPost<T>(path: string, body: unknown): Promise<T> {
-    const url = new URL(this.config.apiPath + path, this.config.url);
-    const res = await fetch(url, {
+    const url = this.buildUrl(path);
+    const text = await this.requestOnce(path, url, {
       method: "POST",
       headers: {
         "X-Api-Key": this.config.apiKey,
@@ -52,18 +149,12 @@ export class ServarrClient {
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(
-        `${this.config.appName} ${res.status} ${res.statusText} for ${path}: ${text.slice(0, 200)}`,
-      );
-    }
-    return (await res.json()) as T;
+    return JSON.parse(text) as T;
   }
 
   protected async requestPut<T>(path: string, body: unknown): Promise<T> {
-    const url = new URL(this.config.apiPath + path, this.config.url);
-    const res = await fetch(url, {
+    const url = this.buildUrl(path);
+    const text = await this.requestOnce(path, url, {
       method: "PUT",
       headers: {
         "X-Api-Key": this.config.apiKey,
@@ -72,18 +163,12 @@ export class ServarrClient {
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(
-        `${this.config.appName} ${res.status} ${res.statusText} for ${path}: ${text.slice(0, 200)}`,
-      );
-    }
-    return (await res.json()) as T;
+    return JSON.parse(text) as T;
   }
 
   protected async requestPostVoid(path: string, body: unknown): Promise<void> {
-    const url = new URL(this.config.apiPath + path, this.config.url);
-    const res = await fetch(url, {
+    const url = this.buildUrl(path);
+    await this.requestOnce(path, url, {
       method: "POST",
       headers: {
         "X-Api-Key": this.config.apiKey,
@@ -92,12 +177,6 @@ export class ServarrClient {
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(
-        `${this.config.appName} ${res.status} ${res.statusText} for ${path}: ${text.slice(0, 200)}`,
-      );
-    }
     // Servarr POSTs that mutate without returning a body (e.g.
     // /history/failed/{id}). We deliberately don't parse the response.
   }
@@ -106,23 +185,14 @@ export class ServarrClient {
     path: string,
     params: Record<string, string | number | boolean> = {},
   ): Promise<void> {
-    const url = new URL(this.config.apiPath + path, this.config.url);
-    for (const [k, v] of Object.entries(params)) {
-      url.searchParams.set(k, String(v));
-    }
-    const res = await fetch(url, {
+    const url = this.buildUrl(path, params);
+    await this.requestOnce(path, url, {
       method: "DELETE",
       headers: {
         "X-Api-Key": this.config.apiKey,
         Accept: "application/json",
       },
     });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(
-        `${this.config.appName} ${res.status} ${res.statusText} for ${path}: ${text.slice(0, 200)}`,
-      );
-    }
     // Servarr DELETE endpoints typically return 200/204 with no body.
   }
 
