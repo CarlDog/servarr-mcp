@@ -17,10 +17,8 @@ timeout Open Decision parked since 2026-05-06 (see caveat under Done
 below: it shipped as one flat timeout, not the two-tier split
 originally pitched). `radarr_quick_add_movie` / `sonarr_quick_add_series`
 collapse the lookup-then-add two-step into one fuzzy-matched call.
-**128 unit tests** (up from 19; the 40 read-only integration tests are
-unchanged), all green; typecheck/lint/format/build all clean. Also
-landed: MIT license, a gitleaks CI backstop, Docker publish gated on
-tests passing, and least-privilege CodeQL permissions — partial
+Also landed: MIT license, a gitleaks CI backstop, Docker publish gated
+on tests passing, and least-privilege CodeQL permissions — partial
 progress against the open fleet standards-gap tracker (issue #9),
 which still lists ~9 adoption-debt items (canonical `shared/` file
 layout — now partially adopted via the security work above —
@@ -28,6 +26,18 @@ container HEALTHCHECK, `.editorconfig`, etc.) not yet started, and
 whose three P0 findings (MCP-F03, MCP-P04, MCP-F01/F02/F04) are now
 resolved by the work below but not yet checked off on the issue
 itself.
+
+**Test count correction:** the "128 unit tests" figure above was
+wrong when first written this session — see "Done — fix dist/test
+contamination" below. The real, verified count is **6 unit test
+files / 44 tests**, **10 files / 84 tests** total including the
+read-only integration suite. All green; typecheck/lint/format/build
+all clean. Also landed: `express` 4→5, `zod` 3→4, `@types/express`
+4→5, `@types/node` 22→26 (typecheck/lint/build/full-test-suite clean,
+plus a live HTTP-transport smoke test — server boot, `/health`,
+a real MCP `initialize` handshake, and `tools/list` across all 122
+tools including the one using `.passthrough()`). `typescript` stays
+pinned at 5.9.3 — see "Done — dependency updates" below for why.
 
 ## Phase (previous — test infrastructure)
 
@@ -880,8 +890,11 @@ existing `radarr_add_movie`/`sonarr_add_series` tools. An ambiguous
 title match also refuses and lists candidates rather than picking one.
 Verified via unit tests only (`CaptureServer` + monkey-patched client
 methods) — no live write against production, per this repo's policy
-of no write-integration-tests against production. 10 new tests, all
-118 existing tests still pass (128 total).
+of no write-integration-tests against production. 10 new tests. (The
+commit message's "118 existing + 10 new = 128" total was itself
+measured with a contaminated `dist/` present — see "Done — fix
+dist/test contamination" below; the real post-fix count for the whole
+suite is 44 unit / 84 total.)
 
 Landed 5 minutes before the `ApiError` adoption above, so these throw
 plain `Error` on their handler-level validation guards (ambiguous
@@ -895,6 +908,82 @@ is purpose-built for actual upstream HTTP failures (it requires a
 `status` code) and is used exclusively inside `ServarrClient`'s
 request methods — using it for a business-logic refusal like "3 movies
 matched, refusing to guess" would misuse the type, not fix anything.
+
+## Done (fix — dist/test contamination)
+
+Discovered while investigating why Dependabot PR #11's CI ran
+suspiciously long. `tsconfig.json` had no exclusion for test files
+(`"include": ["src/**/*"]`), so `npm run build` compiled every
+`src/**/*.test.ts` into `dist/**/*.test.js` alongside real source.
+Two consequences:
+
+1. **Every reported test count in this repo's history is inflated.**
+   CI's `Test` job runs `Build` before `Test` (`.github/workflows/test.yml`),
+   so by the time `npm run test` (plain `vitest run`, no excludes) ran,
+   `dist/` already held 10 duplicate compiled test files. Vitest has
+   no `dist/` exclusion configured either, so it silently ran both
+   copies. Verified the true baseline with a clean `dist/`: **6 unit
+   test files / 44 tests**, **10 files / 84 tests** total (unit +
+   integration) — not the 128/118/66/59 figures scattered through this
+   document's history, all of which were apparently measured the same
+   contaminated way.
+2. **Worse than cosmetic.** `test:unit`'s `--exclude=**/*.integration.test.ts`
+   flag only matches the `.ts` extension. A contaminated `dist/` means
+   that flag fails to exclude the *compiled* `.js` integration tests,
+   so the "safe, no-live-credentials-needed" `test:unit` command could
+   silently execute the real integration suite against production
+   Sonarr/Radarr/Lidarr/Prowlarr whenever `dist/` existed from a prior
+   local build. The suite is read-only, so no harm done in practice,
+   but not the guarantee that command exists to make.
+
+Fix: added `"src/**/*.test.ts"` to `tsconfig.json`'s `exclude`. Test
+files never reach `dist/` now — verified with a clean rebuild (0
+`*.test.js` files emitted) and confirmed `test`/`test:unit` report the
+correct counts even with `dist/` present, matching CI's exact
+Build-then-Test step order. Bonus: also stops 10 unnecessary test
+files from shipping in the published npm package and the Docker image
+(`package.json`'s `"files": ["dist"]` and the Dockerfile's
+`COPY --from=build .../dist` both include whatever `tsc` emits).
+
+## Done (dependency updates — express 5, zod 4, @types majors)
+
+Dependabot PR #11 bundled five major-version bumps (`express`,
+`@types/express`, `zod`, `@types/node`, `typescript`) into one group;
+its CI was red across every job. Investigated by checking the branch
+out into a worktree and reproducing locally rather than reading CI
+logs blind.
+
+**`typescript` 5.9.3 → 7.0.2 is categorically blocked, not just
+untested.** `typescript-eslint@8.65.0` (and even its latest release,
+8.66.0, checked directly) caps its peer dependency at
+`typescript@">=4.8.4 <6.1.0"` — TypeScript 6.x and 7.x aren't
+supported by `typescript-eslint` at all yet, upstream. `npm install`
+fails on the peer conflict before any test or lint step runs, which is
+why every CI job failed identically. Nothing to fix on our side;
+revisit once `typescript-eslint` adds 6.x/7.x support.
+
+**The other four are safe and now applied directly** (not through
+Dependabot's bundled PR, since `typescript` had to be excluded):
+`express` 4→5, `@types/express` 4→5, `zod` 3→4, `@types/node` 22→26.
+Verified against current `main` (PR #11's branch predated the
+2026-08-05 security-hardening and quick-add commits by two days, so
+testing its stale branch directly would have been misleading):
+typecheck/lint/format/build all clean, full test suite green (84/84).
+Went beyond static checks given the blast radius — `zod` backs every
+tool's `inputSchema` and `express` backs the HTTP transport — with a
+live smoke test: booted the server in HTTP mode against real
+credentials, hit `/health`, completed a real MCP `initialize`
+handshake, and called `tools/list` across all 122 registered tools
+including `radarr_grab_release`/`sonarr_grab_release`/etc., the only
+schemas using `.passthrough()`. All worked. Codebase only uses zod's
+core primitives (`z.object`/`.string`/`.number`/`.enum`/`.array`/
+`.passthrough`) — none of the v3→v4 renamed/deprecated string-format
+methods (`.email()`, `.url()`, etc.) appear anywhere.
+
+PR #11 closed (see PR comment) in favor of this split; a fresh
+Dependabot PR for the remaining `typescript` bump will reappear
+automatically once a newer patch/minor lands, and will keep failing
+until `typescript-eslint` catches up.
 
 ## Next
 
