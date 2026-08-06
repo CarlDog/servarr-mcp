@@ -36,8 +36,10 @@ all clean. Also landed: `express` 4→5, `zod` 3→4, `@types/express`
 4→5, `@types/node` 22→26 (typecheck/lint/build/full-test-suite clean,
 plus a live HTTP-transport smoke test — server boot, `/health`,
 a real MCP `initialize` handshake, and `tools/list` across all 122
-tools including the one using `.passthrough()`). `typescript` stays
-pinned at 5.9.3 — see "Done — dependency updates" below for why.
+tools including the one using `.passthrough()`). `typescript` bumped
+5.9.3 → 6.0.3 — the highest version compatible with `typescript-eslint`,
+which caps at `<6.1.0` (see "Done — dependency updates" below); the
+7.0.2 the original Dependabot PR wanted is still blocked.
 
 ## Phase (previous — test infrastructure)
 
@@ -945,7 +947,7 @@ files from shipping in the published npm package and the Docker image
 (`package.json`'s `"files": ["dist"]` and the Dockerfile's
 `COPY --from=build .../dist` both include whatever `tsc` emits).
 
-## Done (dependency updates — express 5, zod 4, @types majors)
+## Done (dependency updates — express 5, zod 4, typescript 6, @types majors)
 
 Dependabot PR #11 bundled five major-version bumps (`express`,
 `@types/express`, `zod`, `@types/node`, `typescript`) into one group;
@@ -953,37 +955,51 @@ its CI was red across every job. Investigated by checking the branch
 out into a worktree and reproducing locally rather than reading CI
 logs blind.
 
-**`typescript` 5.9.3 → 7.0.2 is categorically blocked, not just
-untested.** `typescript-eslint@8.65.0` (and even its latest release,
-8.66.0, checked directly) caps its peer dependency at
-`typescript@">=4.8.4 <6.1.0"` — TypeScript 6.x and 7.x aren't
-supported by `typescript-eslint` at all yet, upstream. `npm install`
-fails on the peer conflict before any test or lint step runs, which is
-why every CI job failed identically. Nothing to fix on our side;
-revisit once `typescript-eslint` adds 6.x/7.x support.
+**`typescript` 5.9.3 → 7.0.2 (what PR #11 wanted) is categorically
+blocked, not just untested.** `typescript-eslint@8.65.0` (its latest
+release 8.66.0, and even its `canary` pre-release channel, all checked
+directly) caps its peer dependency at `typescript@">=4.8.4 <6.1.0"` —
+TypeScript past 6.1 isn't supported by `typescript-eslint` in any
+published channel yet, upstream. `npm install` fails on the peer
+conflict before any test or lint step runs, which is why every CI job
+in PR #11 failed identically. No ETA; revisit once `typescript-eslint`
+adds newer support.
 
-**The other four are safe and now applied directly** (not through
-Dependabot's bundled PR, since `typescript` had to be excluded):
-`express` 4→5, `@types/express` 4→5, `zod` 3→4, `@types/node` 22→26.
-Verified against current `main` (PR #11's branch predated the
-2026-08-05 security-hardening and quick-add commits by two days, so
-testing its stale branch directly would have been misleading):
-typecheck/lint/format/build all clean, full test suite green (84/84).
-Went beyond static checks given the blast radius — `zod` backs every
-tool's `inputSchema` and `express` backs the HTTP transport — with a
-live smoke test: booted the server in HTTP mode against real
-credentials, hit `/health`, completed a real MCP `initialize`
-handshake, and called `tools/list` across all 122 registered tools
-including `radarr_grab_release`/`sonarr_grab_release`/etc., the only
-schemas using `.passthrough()`. All worked. Codebase only uses zod's
-core primitives (`z.object`/`.string`/`.number`/`.enum`/`.array`/
-`.passthrough`) — none of the v3→v4 renamed/deprecated string-format
-methods (`.email()`, `.url()`, etc.) appear anywhere.
+**But TypeScript's own version history has a gap worth knowing:** it
+jumped straight from the 5.9.x line to 6.0.x to 7.0.x — 6.1, 6.2, etc.
+never existed. That means `typescript-eslint`'s `<6.1.0` cap actually
+covers the *entire* 6.0.x line, including its latest stable release,
+6.0.3. Verified `6.0.3` directly in an isolated worktree first (clean
+install, no peer conflict, typecheck/lint/build/tests all green), then
+applied it for real: `typescript` 5.9.3 → **6.0.3**. Full clean-room
+verification on `main`: typecheck/lint/format/build clean, `npm audit`
+0 vulnerabilities, full test suite green (10 files / 84 tests,
+including the real read-only integration suite). No runtime smoke test
+needed here — TypeScript is compile-time only, no shipped runtime
+behavior to exercise the way express/zod had.
 
-PR #11 closed (see PR comment) in favor of this split; a fresh
-Dependabot PR for the remaining `typescript` bump will reappear
-automatically once a newer patch/minor lands, and will keep failing
-until `typescript-eslint` catches up.
+**The other four majors are also safe and applied directly** (not
+through Dependabot's bundled PR): `express` 4→5, `@types/express` 4→5,
+`zod` 3→4, `@types/node` 22→26. Verified against current `main` (PR
+#11's branch predated the 2026-08-05 security-hardening and quick-add
+commits by two days, so testing its stale branch directly would have
+been misleading): typecheck/lint/format/build all clean, full test
+suite green. Went beyond static checks given the blast radius — `zod`
+backs every tool's `inputSchema` and `express` backs the HTTP
+transport — with a live smoke test: booted the server in HTTP mode
+against real credentials, hit `/health`, completed a real MCP
+`initialize` handshake, and called `tools/list` across all 122
+registered tools including `radarr_grab_release`/`sonarr_grab_release`/
+etc., the only schemas using `.passthrough()`. All worked. Codebase
+only uses zod's core primitives (`z.object`/`.string`/`.number`/
+`.enum`/`.array`/`.passthrough`) — none of the v3→v4 renamed/deprecated
+string-format methods (`.email()`, `.url()`, etc.) appear anywhere.
+
+PR #11 closed (see PR comment) in favor of this split. A fresh
+Dependabot PR for the remaining `typescript` 7.0.2 bump will reappear
+automatically and will keep failing until `typescript-eslint` adds
+6.1+/7.x support — at which point revisit; the 6.0.3 stopgap above is
+not itself something to chase further improvements on.
 
 ## Next
 
