@@ -134,7 +134,7 @@ the base — Lidarr v2 (when it eventually ships) will need to override it.
 npm install            # install deps
 npm run build          # tsc → dist/
 npm run dev            # tsx src/index.ts (requires at least one app's env vars)
-npm run typecheck      # tsc --noEmit
+npm run typecheck      # tsc -p tsconfig.typecheck.json (src + tests)
 npm run lint           # eslint .
 npm run format:check   # prettier --check . (or `npm run format` to fix)
 npm run test           # vitest run (unit + integration if .env present)
