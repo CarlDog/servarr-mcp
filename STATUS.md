@@ -1,8 +1,35 @@
 # Status
 
-**Last updated:** 2026-05-08
+**Last updated:** 2026-08-06
 
 ## Phase
+
+Security hardening across the outbound and inbound edges, plus two new
+tools. The HTTP transport now requires bearer auth, a Host/Origin
+allowlist, and idle-session eviction — previously reachable
+unauthenticated on the network despite being write-capable (add/edit/
+grab/remove across four media apps). Sensitive `Field` values
+(Prowlarr API keys/passkeys/RSS keys) are now redacted recursively
+before reaching the model, at any nesting depth. Every outbound *arr
+request now has a 30s timeout, throws a typed `ApiError`, and retries
+GET-only on 429 with bounded jittered backoff — resolves the HTTP
+timeout Open Decision parked since 2026-05-06 (see caveat under Done
+below: it shipped as one flat timeout, not the two-tier split
+originally pitched). `radarr_quick_add_movie` / `sonarr_quick_add_series`
+collapse the lookup-then-add two-step into one fuzzy-matched call.
+**128 unit tests** (up from 19; the 40 read-only integration tests are
+unchanged), all green; typecheck/lint/format/build all clean. Also
+landed: MIT license, a gitleaks CI backstop, Docker publish gated on
+tests passing, and least-privilege CodeQL permissions — partial
+progress against the open fleet standards-gap tracker (issue #9),
+which still lists ~9 adoption-debt items (canonical `shared/` file
+layout — now partially adopted via the security work above —
+container HEALTHCHECK, `.editorconfig`, etc.) not yet started, and
+whose three P0 findings (MCP-F03, MCP-P04, MCP-F01/F02/F04) are now
+resolved by the work below but not yet checked off on the issue
+itself.
+
+## Phase (previous — test infrastructure)
 
 Test infrastructure rounded out: 19 unit tests + 40 read-only
 integration tests against the real *arr instances, gated on env
@@ -759,6 +786,116 @@ movie library — the regression is gone.
   Runtime majors (express/undici/zod/TS) stay deferred per the closed
   npm-major PR.
 
+## Done (security hardening — HTTP transport auth, host allowlist, idle eviction)
+
+MCP-F03 (`aa70cf1`, 2026-07-30). The Streamable-HTTP transport was
+unhardened on all four counts a standards audit flagged: no auth
+check on `/mcp`, no Host/Origin allowlist (DNS-rebinding exposed —
+binding loopback means nothing inside a container, per
+`docker-deployments.md` §8), no idle-session eviction (a long-lived
+NAS container accumulates every `McpServer` ever created since
+clients disconnect without a clean teardown far more often than they
+send one), and no shutdown handling. This is a write-capable server
+reachable unauthenticated on the network.
+
+Adopted the fleet-canonical `src/shared/http-transport.ts` verbatim
+(standard MCP-F03/MCP-S01, hash-compared — don't hand-edit) plus its
+two direct dependencies, `src/shared/log.ts` and `src/shared/redact.ts`,
+rather than hand-rolling an equivalent. New optional env vars, both
+defaulting to open with a loud startup warning either way so the
+posture is never silent: `MCP_AUTH_TOKEN` (bearer, SHA-256-hashed
+constant-time comparison), `MCP_ALLOWED_HOSTS` (comma-separated Host/
+Origin allowlist), `MCP_SESSION_IDLE_MS` (default 30 minutes). SIGTERM/
+SIGINT now wired to the transport's `dispose()`. Bind address stays
+`0.0.0.0` deliberately — the allowlist is the real defense, not the
+bind address.
+
+Verified against the running server (not just unit tests of the
+canonical file): 401 on missing/wrong bearer token, 403 on a
+disallowed Host with the expected log line, a real session
+initializing when both checks pass, `/health` reachable without auth
+(outside the `/mcp` mount), the documented open-with-warnings default
+when neither var is set, clean exit under SIGTERM.
+
+## Done (security hardening — sensitive field redaction)
+
+MCP-P04 (`fc9c1e5`, 2026-07-30). `asText()` is the one chokepoint
+every tool response passes through, but nothing there redacted
+anything — concretely, `prowlarr_list_indexers` returned each
+indexer's raw apiKey/passkey/RSS key verbatim. Prowlarr's own OpenAPI
+spec (`docs/specs/prowlarr.json`) marks exactly these values with a
+`privacy` discriminator on `Field` objects (`normal | password |
+apiKey | userName`); nothing checked it.
+
+`asText` now recursively walks the response tree and redacts any
+object matching Servarr's Field shape (`{value, privacy: <non-normal>}`)
+at any nesting depth, regardless of which tool/app it came from —
+covers any current or future tool returning Field-shaped data
+(download clients, notifications, and import lists use the same
+schema), not just the already-identified Prowlarr case. 5 new tests:
+the concrete Prowlarr-shaped case, each of the three sensitive privacy
+levels, a negative case (`privacy: normal` untouched), a negative case
+(value without a privacy discriminator untouched — don't over-redact),
+and arbitrary nesting depth.
+
+## Done (security hardening — outbound timeout, typed errors, bounded retry)
+
+MCP-F01/F02/F04 (`39ed91d`, 2026-08-05). `ServarrClient`'s HTTP
+methods threw plain `Error` with no timeout and no retry. Adopted the
+fleet-canonical `src/shared/errors.ts` verbatim (`ApiError`,
+`formatApiError`, `parseRetryAfterMs`, `backoffMs`, `shouldRetry`) and
+funneled every request method through one `requestOnce` chokepoint
+that arms an `AbortController` per attempt and throws a typed
+`ApiError` carrying `status`/`retryAfterMs`/`body`. Added a bounded
+exponential-backoff retry loop for GET only (`MAX_RETRIES = 3`,
+jittered); POST/PUT/DELETE stay single-attempt since their effect on
+failure is ambiguous. `Retry-After` is honored but capped at
+`MAX_RETRY_AFTER_MS = 60_000` — an upstream asking to wait longer than
+that throws rather than stalling the whole tool queue.
+
+**Resolves the HTTP timeout Open Decision parked since 2026-05-06 —
+with a caveat.** It shipped as a single flat 30s timeout everywhere,
+not the two-tier 30s/120s split the Open Decision had pitched for
+`searchReleases`'s slower live-indexer path. A legitimately slow
+30-60s `release_search` (the case that originally motivated the
+decision — a High School DxD S1 search hung 5+ minutes on a slow
+indexer) can now abort at 30s instead of hanging indefinitely, which
+is strictly better than before, but a per-call timeout override for
+`searchReleases` is still worth revisiting if 30s proves too tight in
+practice.
+
+## Done (write tools — quick-add)
+
+`radarr_quick_add_movie` / `sonarr_quick_add_series` (`8785282`,
+2026-08-05) collapse the lookup-then-add two-step into one
+fuzzy-matched call for the common unambiguous case, mirroring a
+pattern found in atlascloud-mcp during a comparative fleet review.
+
+Design decisions confirmed with the operator before writing code:
+`quality_profile_id`/`root_folder_path` auto-resolve only when exactly
+one is configured; with more than one, the tool refuses and lists the
+options rather than guessing. `search_for_movie`/
+`search_for_missing_episodes` default to `false`, matching the
+existing `radarr_add_movie`/`sonarr_add_series` tools. An ambiguous
+title match also refuses and lists candidates rather than picking one.
+Verified via unit tests only (`CaptureServer` + monkey-patched client
+methods) — no live write against production, per this repo's policy
+of no write-integration-tests against production. 10 new tests, all
+118 existing tests still pass (128 total).
+
+Landed 5 minutes before the `ApiError` adoption above, so these throw
+plain `Error` on their handler-level validation guards (ambiguous
+match, no results, missing profile/folder). **Checked during the
+2026-08-06 session and confirmed this is not an inconsistency** — every
+handler-level validation guard in the codebase (the pre-existing
+`sonarr_add_series`/`radarr_add_movie` lookup-no-results checks,
+`lidarr_add_artist`, `readarr_add_author`, the `release_search`
+"at least one id" guards) throws plain `Error` the same way. `ApiError`
+is purpose-built for actual upstream HTTP failures (it requires a
+`status` code) and is used exclusively inside `ServarrClient`'s
+request methods — using it for a business-logic refusal like "3 movies
+matched, refusing to guess" would misuse the type, not fix anything.
+
 ## Next
 
 1. **Smoke-test `lidarr_grab_release` / `readarr_grab_release`** —
@@ -775,18 +912,23 @@ movie library — the regression is gone.
    (collection-level monitoring, Radarr-specific),
    `lidarr_monitor_albums` / `readarr_monitor_books` (bulk monitor
    toggles), per-season/episode monitor tools for Sonarr.
+4. **Update issue #9** (`[standards-gap] ts-mcp-server v1.0`) — its
+   three P0 judgment findings (MCP-F03 transport hardening, MCP-P04
+   field redaction, MCP-F01/F02/F04 timeout/typed-errors/retry) are
+   now resolved by the security-hardening work above, but the issue's
+   checkboxes haven't been updated to reflect it. The other ~9
+   adoption-debt items (canonical `shared/` layout — partially done —
+   container `HEALTHCHECK`, `.editorconfig`, `naming.test.ts`,
+   version-sync test, etc.) are still genuinely open.
 
 ## Open Decisions
 
-- **HTTP timeout strategy for `ServarrClient.request*`** (parked
-  2026-05-06). Currently no timeout; bare `fetch()`. Caught when a
-  Sonarr release_search for High School DxD S1 hung 5+ minutes
-  (likely a slow indexer). Endpoint SLAs vary widely — most reads
-  are sub-second, but `release_search` legitimately takes 30-60s
-  (live indexer hit). Pitched but not decided: two-tier default
-  (30s everywhere, `searchReleases` opts into 120s via
-  `AbortController` + per-call override). Revisit when timeouts
-  bite again.
+- **Per-call timeout override for `searchReleases`.** Resolved to a
+  flat 30s timeout everywhere on 2026-08-05 (see "Done — outbound
+  timeout, typed errors, bounded retry" above), not the two-tier
+  30s/120s split originally pitched. Revisit only if a legitimately
+  slow 30-60s `release_search` starts hitting the 30s ceiling in
+  practice.
 
 Decisions made during scaffolding:
 
