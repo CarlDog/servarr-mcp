@@ -21,8 +21,12 @@ export class SonarrClient extends ServarrClient {
     return this.requestPost("/series", body);
   }
 
-  async editSeries(id: number, body: unknown): Promise<unknown> {
-    return this.requestPut(`/series/${id}`, body);
+  async editSeries(
+    id: number,
+    body: unknown,
+    moveFiles = false,
+  ): Promise<unknown> {
+    return this.requestPut(`/series/${id}`, body, { moveFiles });
   }
 
   async listEpisodes(seriesId: number): Promise<unknown> {

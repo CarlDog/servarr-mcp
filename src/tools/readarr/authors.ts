@@ -99,7 +99,8 @@ export function registerAuthorTools(
     {
       title: "Readarr: Edit Author",
       description:
-        "Edit settings on an existing Readarr author. Internally GETs the current AuthorResource, applies your changes, and PUTs the full resource back. Pass only the fields you want to change — others are preserved. WARNING: changing root_folder_path moves files on disk.",
+        "Edit settings on an existing Readarr author. Internally GETs the current AuthorResource, applies your changes, and PUTs the full resource back. Pass only the fields you want to change — others are preserved. " +
+        "root_folder_path changes the parent folder Readarr computes the author's path under; path sets the full on-disk folder path directly (e.g. to fix a case-sensitivity or mount-alias mismatch) without that recalculation. Either can trigger a file move — controlled by move_files, which this tool always passes explicitly and defaults to false, so a metadata-only correction (path and/or root_folder_path with move_files left at its default) never touches files on disk. Set move_files: true only when you intend an actual relocation.",
       inputSchema: {
         id: z
           .number()
@@ -129,7 +130,19 @@ export function registerAuthorTools(
           .string()
           .optional()
           .describe(
-            "Change the root folder (from readarr_list_root_folders). WARNING: this moves the author's files on disk.",
+            "Change the root folder (from readarr_list_root_folders). Readarr recomputes the author's full path under this root. See move_files.",
+          ),
+        path: z
+          .string()
+          .optional()
+          .describe(
+            "Directly set the author's full on-disk folder path as a string, bypassing root_folder_path's recalculation. Use for metadata-only corrections (e.g. a case or mount-alias fix) — combine with the default move_files: false so Readarr updates its record without touching files.",
+          ),
+        move_files: z
+          .boolean()
+          .optional()
+          .describe(
+            "Whether a root_folder_path or path change should physically move files on disk. Defaults to false — always passed explicitly rather than relying on Readarr's own default. Set true only to perform an actual relocation.",
           ),
         tags: z
           .array(z.number().int())
@@ -146,6 +159,8 @@ export function registerAuthorTools(
       quality_profile_id,
       metadata_profile_id,
       root_folder_path,
+      path,
+      move_files,
       tags,
     }) => {
       const current = (await readarr.getAuthor(id)) as Record<string, unknown>;
@@ -160,8 +175,9 @@ export function registerAuthorTools(
       if (root_folder_path !== undefined) {
         updated.rootFolderPath = root_folder_path;
       }
+      if (path !== undefined) updated.path = path;
       if (tags !== undefined) updated.tags = tags;
-      return asText(await readarr.editAuthor(id, updated));
+      return asText(await readarr.editAuthor(id, updated, move_files ?? false));
     },
   );
 }

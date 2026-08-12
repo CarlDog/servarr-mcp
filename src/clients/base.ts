@@ -152,8 +152,12 @@ export class ServarrClient {
     return JSON.parse(text) as T;
   }
 
-  protected async requestPut<T>(path: string, body: unknown): Promise<T> {
-    const url = this.buildUrl(path);
+  protected async requestPut<T>(
+    path: string,
+    body: unknown,
+    params: Record<string, string | number | boolean> = {},
+  ): Promise<T> {
+    const url = this.buildUrl(path, params);
     const text = await this.requestOnce(path, url, {
       method: "PUT",
       headers: {

@@ -21,8 +21,12 @@ export class LidarrClient extends ServarrClient {
     return this.requestPost("/artist", body);
   }
 
-  async editArtist(id: number, body: unknown): Promise<unknown> {
-    return this.requestPut(`/artist/${id}`, body);
+  async editArtist(
+    id: number,
+    body: unknown,
+    moveFiles = false,
+  ): Promise<unknown> {
+    return this.requestPut(`/artist/${id}`, body, { moveFiles });
   }
 
   async listAlbums(artistId?: number): Promise<unknown> {
