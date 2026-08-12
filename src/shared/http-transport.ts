@@ -132,11 +132,21 @@ export function mountMcpHttp(
       return;
     }
 
-    const isInitialize = req.method === "POST" && !sessionId;
-    if (!isInitialize) {
+    // A session id we don't recognise: evicted by the sweep above, or the
+    // container restarted under a live client. The spec REQUIRES 404 here —
+    // it is the client's ONLY defined signal to start a new session by
+    // re-initializing (2025-06-18, Session Management §3/§4). A 400 reads as
+    // a generic protocol error, so the client stays wedged until a human
+    // restarts it: a routine idle eviction turns into a dead connection.
+    if (sessionId) {
+      res.status(404).json({ error: "Not Found: unknown or expired session" });
+      return;
+    }
+
+    // No session id at all, and not an initialize POST — spec says 400.
+    if (req.method !== "POST") {
       res.status(400).json({
-        error:
-          "Bad Request: missing or unknown session, or non-initialize POST",
+        error: "Bad Request: non-initialize request without a session",
       });
       return;
     }

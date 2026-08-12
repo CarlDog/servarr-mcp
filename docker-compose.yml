@@ -20,6 +20,10 @@ services:
       # (with a logged warning) when unset.
       MCP_AUTH_TOKEN: "${MCP_AUTH_TOKEN:-}"
       MCP_ALLOWED_HOSTS: "${MCP_ALLOWED_HOSTS:-}"
+      # Idle-session eviction threshold (default 30 min). The code has always
+      # read this, but it was missing here — so it read as configurable and
+      # silently wasn't (docker-deployments.md §10). Tunable from Portainer.
+      MCP_SESSION_IDLE_MS: "${MCP_SESSION_IDLE_MS:-1800000}"
       SONARR_URL: "${SONARR_URL:-}"
       SONARR_API_KEY: "${SONARR_API_KEY:-}"
       RADARR_URL: "${RADARR_URL:-}"

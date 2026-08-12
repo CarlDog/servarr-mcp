@@ -4,6 +4,22 @@
 
 ## Phase
 
+**Fixed a spec violation that made the MCP look disconnected.** Reported as
+"servarr-mcp isn't connected"; the server was healthy the whole time. The
+30-minute idle sweep had evicted the client's session (correct, deliberate),
+but the next request carrying that now-unknown session id got **HTTP 400**.
+The Streamable HTTP spec (2025-06-18, Session Management §3/§4) makes **404**
+the client's *only* defined signal to re-initialize, so a routine eviction
+read as a dead connection. Fixed in the fleet-canonical
+`src/shared/http-transport.ts` and propagated to all six servers that carry
+the same code (`atlascloud-mcp`, `plex-companion`, `kindroid-mcp` share the
+file; `plex-mcp` and `downloader-mcp` hand-roll it). New
+`src/shared/http-transport.test.ts` (8 tests) locks it in — verified to fail
+against the pre-fix code. Also added `MCP_SESSION_IDLE_MS` to
+`docker-compose.yml`: the code always read it, but it was missing from the
+`environment:` block, so it read as configurable and silently wasn't
+(`docker-deployments.md` §10).
+
 Closed the loop on accumulated `mcp-feedback` dogfooding notes (real
 usage sessions from 2026-08-11 and 2026-08-12) — three fixes, all
 verified and pushed:
