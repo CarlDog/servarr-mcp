@@ -1,8 +1,57 @@
 # Status
 
-**Last updated:** 2026-08-06
+**Last updated:** 2026-08-12
 
 ## Phase
+
+Closed the loop on accumulated `mcp-feedback` dogfooding notes (real
+usage sessions from 2026-08-11 and 2026-08-12) — three fixes, all
+verified and pushed:
+
+- **Security: Prowlarr API key leak via history `downloadUrl`,
+  fixed.** Confirmed independently on `sonarr_history` (22
+  occurrences/100 records) and `radarr_history_movie` (2/2 records —
+  the *recommended narrow drill-down tool*, meaning there was no
+  low-exposure way to read history at all). The `asText()` redaction
+  chokepoint now strips `apikey`/`api_key`/`passkey`/`pass_key` query
+  params from every string in the response tree, not scoped to any
+  field name — covers the confirmed case plus `nzbInfoUrl`/`guid`/
+  `infoUrl` and anything future. 12 new tests.
+- **`path` + `move_files` added to all four edit tools.** A real
+  165-item metadata-only path correction (case/mount-alias fix, zero
+  bytes meant to move) had no safe route through the MCP —
+  `root_folder_path` was the only settable path field, and changing it
+  makes Servarr compute a relocation. Forced a raw-HTTP-API fallback
+  with manually-extracted credentials, which is how the leaked key
+  above ended up cached on disk in the first place. `path` now sets
+  the on-disk folder string directly; `move_files` is always passed
+  explicitly to the upstream PUT (default false) rather than relying
+  on Servarr's own default. Verified via the pinned OpenAPI specs that
+  all four resource schemas and PUT endpoints support this uniformly.
+  6 new tests.
+- **`MCP_AUTH_TOKEN` set on the live deploy.** Had shipped in code
+  back on 2026-07-30 (MCP-F03) but was never actually set in the
+  Portainer stack env — the `/mcp` endpoint had been accepting
+  unauthenticated write-capable requests for a week. Verified this
+  workstation's Claude Code config was the only consumer before
+  flipping it on; updated that config with the bearer token in the
+  same pass so nothing broke. Verified live: unauthenticated POST
+  `/mcp` now 401s, a request with the token 200s, `/health` stays open
+  as designed.
+
+Still open from the same dogfooding notes (not touched this round):
+bulk queue removal (a 54-item incident needed 54 separate calls), no
+import-list/notification tools (health checks diagnose but can't
+fix), no manual-import tool (a blocked queue item is a diagnosis-only
+dead end), root-folder tools don't surface item-level path mismatches,
+and list endpoints lack field projection with inconsistent page-size
+caps across siblings. Full detail in the OpenChronicle project's
+`mcp-feedback` memories (tagged `partially-resolved`).
+
+**102 tests** (62 unit / 40 integration), all green; typecheck/lint/
+format/build all clean.
+
+## Phase (previous — dependency majors + build fix)
 
 Security hardening across the outbound and inbound edges, plus two new
 tools. The HTTP transport now requires bearer auth, a Host/Origin
