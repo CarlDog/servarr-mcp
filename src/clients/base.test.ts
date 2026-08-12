@@ -81,6 +81,80 @@ describe("asText", () => {
       expect(parsed.level1.level2.level3[0].value).toBe("[redacted]");
     });
   });
+
+  describe("URL secret redaction", () => {
+    // The concrete exposure: sonarr_history / radarr_history_movie return
+    // data.downloadUrl carrying Prowlarr's apikey in plaintext when the
+    // indexer is Prowlarr-fronted. Confirmed live on both tools.
+    test("redacts apikey from a downloadUrl-shaped field", () => {
+      const out = asText({
+        data: {
+          downloadUrl:
+            "http://prowlarr.example:9696/8/download?apikey=abc123def456&link=foo&file=bar",
+        },
+      });
+      const parsed = parseAsText(out);
+      expect(parsed.data.downloadUrl).toBe(
+        "http://prowlarr.example:9696/8/download?apikey=%5Bredacted%5D&link=foo&file=bar",
+      );
+      expect(parsed.data.downloadUrl).not.toContain("abc123def456");
+    });
+
+    test.each(["apikey", "api_key", "apiKey", "APIKEY", "passkey", "pass_key"])(
+      "redacts the %s query param case-insensitively",
+      (paramName) => {
+        const out = asText({
+          url: `https://indexer.example/fetch?${paramName}=sekret&other=1`,
+        });
+        const parsed = parseAsText(out);
+        expect(parsed.url).not.toContain("sekret");
+        expect(parsed.url).toContain("other=1");
+      },
+    );
+
+    test("redacts at any field name, not just downloadUrl", () => {
+      const out = asText({
+        nzbInfoUrl: "http://usenet.example/info?apikey=hidden-key",
+        guid: "http://tracker.example/guid?passkey=hidden-passkey",
+      });
+      const parsed = parseAsText(out);
+      expect(parsed.nzbInfoUrl).not.toContain("hidden-key");
+      expect(parsed.guid).not.toContain("hidden-passkey");
+    });
+
+    test("redacts every occurrence in a list of history records", () => {
+      const out = asText({
+        records: Array.from({ length: 3 }, (_, i) => ({
+          id: i,
+          data: {
+            downloadUrl: `http://prowlarr.example:9696/${i}/download?apikey=samekey123`,
+          },
+        })),
+      });
+      const parsed = parseAsText(out);
+      for (const record of parsed.records) {
+        expect(record.data.downloadUrl).not.toContain("samekey123");
+      }
+    });
+
+    test("leaves a plain URL with no sensitive query params untouched", () => {
+      const out = asText({ baseUrl: "https://indexer.example/rss?page=2" });
+      const parsed = parseAsText(out);
+      expect(parsed.baseUrl).toBe("https://indexer.example/rss?page=2");
+    });
+
+    test("leaves a non-URL string containing 'apikey' as a substring alone", () => {
+      const out = asText({ note: "the apikey=... pattern isn't a real URL" });
+      const parsed = parseAsText(out);
+      expect(parsed.note).toBe("the apikey=... pattern isn't a real URL");
+    });
+
+    test("does not affect a plain string with no query-shaped substring", () => {
+      const out = asText({ title: "Some Movie (2026)" });
+      const parsed = parseAsText(out);
+      expect(parsed.title).toBe("Some Movie (2026)");
+    });
+  });
 });
 
 describe("withProgress", () => {

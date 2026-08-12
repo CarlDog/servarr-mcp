@@ -333,7 +333,50 @@ export class ServarrClient {
 const SENSITIVE_PRIVACY_LEVELS = new Set(["password", "apiKey", "userName"]);
 const REDACTED = "[redacted]";
 
+// Second, independent leak class: history/queue records carry provider
+// fetch URLs (data.downloadUrl, nzbInfoUrl, guid, infoUrl, ...) that embed
+// an *upstream indexer's* API key as a query param when the indexer is
+// Prowlarr-fronted — e.g. `http://prowlarr:9696/8/download?apikey=<key>&...`.
+// Confirmed live on sonarr_history and radarr_history_movie: reading one
+// app's history hands you a different app's credential. The Field-privacy
+// walk above doesn't cover this — these are plain strings, not
+// {value, privacy} objects — so every string in the tree gets checked here
+// too, rather than hardcoding the field names above (a future field
+// carrying the same shape is covered automatically).
+const SENSITIVE_QUERY_PARAM_NAMES = new Set([
+  "apikey",
+  "api_key",
+  "passkey",
+  "pass_key",
+]);
+// Cheap pre-filter so most strings (titles, paths, plain URLs) skip the
+// URL-parsing attempt entirely.
+const LOOKS_LIKE_SENSITIVE_QUERY = /[?&](apikey|api_key|passkey|pass_key)=/i;
+
+function redactUrlSecrets(value: string): string {
+  if (!LOOKS_LIKE_SENSITIVE_QUERY.test(value)) return value;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return value; // not an absolute URL — nothing safe to do
+  }
+  let changed = false;
+  // Snapshot keys before mutating — .set() collapses duplicate-named
+  // params, which would resize the live searchParams mid-iteration.
+  for (const key of Array.from(url.searchParams.keys())) {
+    if (SENSITIVE_QUERY_PARAM_NAMES.has(key.toLowerCase())) {
+      url.searchParams.set(key, REDACTED);
+      changed = true;
+    }
+  }
+  return changed ? url.toString() : value;
+}
+
 function redactSensitiveFields(value: unknown): unknown {
+  if (typeof value === "string") {
+    return redactUrlSecrets(value);
+  }
   if (Array.isArray(value)) {
     return value.map(redactSensitiveFields);
   }
