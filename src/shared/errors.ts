@@ -57,10 +57,14 @@ export class ApiError extends Error {
  * conversion reads only `error.message`, so `cause` is discarded again at
  * that boundary regardless of what the client preserved.
  *
- * `undici`'s own `request()`/`fetch()` (as opposed to Node's global `fetch`)
- * already throws the raw underlying error with the real reason in
- * `.message` — callers using those APIs don't need this helper for that
- * call site, though it's harmless to apply anyway.
+ * `undici`'s own low-level `request()` already throws the raw underlying
+ * error with the real reason in `.message` — a call site using it doesn't
+ * need this helper, though it's harmless to apply anyway. This does NOT
+ * extend to `fetch()`: undici's own spec-compliant `fetch()` shares the
+ * identical WHATWG error-wrapping behavior with Node's global `fetch` (they
+ * are, in fact, the same underlying implementation) — verified empirically
+ * 2026-08-18, both throw a bare `fetch failed` with the real cause only in
+ * `.cause`. A call site on either `fetch()` needs this helper.
  */
 export function describeTransportError(err: unknown): string {
   const base = err instanceof Error ? err.message : String(err);
