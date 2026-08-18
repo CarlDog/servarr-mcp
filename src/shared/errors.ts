@@ -1,5 +1,6 @@
-// CANONICAL SHARED FILE — standard MCP-S01 / MCP-F02 / MCP-F04. Copied verbatim
-// into every ts-mcp-server repo; /repo-standards-audit hash-compares it.
+// CANONICAL SHARED FILE — standard MCP-S01 / MCP-F02 / MCP-F04 / MCP-F08.
+// Copied verbatim into every ts-mcp-server repo; /repo-standards-audit
+// hash-compares it.
 //
 // Typed API errors plus the retry policy. Generalized from kindroid-mcp, the
 // only server in the fleet with either.
@@ -39,6 +40,34 @@ export class ApiError extends Error {
   get isAuth(): boolean {
     return this.status === 401 || this.status === 403;
   }
+}
+
+/**
+ * Describe a transport-level failure (status: 0) with its real cause.
+ *
+ * Node's global `fetch()` throws a bare `TypeError: fetch failed` on any
+ * network-level error (DNS, connect, TLS) — the actual reason lives in
+ * `error.cause` and is discarded if nothing reads it, making a live
+ * connectivity fault undiagnosable from the tool's error output alone
+ * (MCP-F08; found live in downloader-mcp, 2026-08-18: a stale upstream URL
+ * stayed silently broken because every failure just said "fetch failed").
+ *
+ * Callers MUST fold this into the `ApiError`'s `message` itself, not rely on
+ * `cause` surviving on the Error object — the MCP SDK's own tool-error
+ * conversion reads only `error.message`, so `cause` is discarded again at
+ * that boundary regardless of what the client preserved.
+ *
+ * `undici`'s own `request()`/`fetch()` (as opposed to Node's global `fetch`)
+ * already throws the raw underlying error with the real reason in
+ * `.message` — callers using those APIs don't need this helper for that
+ * call site, though it's harmless to apply anyway.
+ */
+export function describeTransportError(err: unknown): string {
+  const base = err instanceof Error ? err.message : String(err);
+  const cause = err instanceof Error ? err.cause : undefined;
+  const causeMsg =
+    cause instanceof Error ? cause.message : cause ? String(cause) : "";
+  return causeMsg ? `${base}: ${causeMsg}` : base;
 }
 
 /**

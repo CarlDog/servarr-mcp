@@ -1,6 +1,7 @@
 import {
   ApiError,
   backoffMs,
+  describeTransportError,
   formatApiError,
   parseRetryAfterMs,
   shouldRetry,
@@ -89,7 +90,7 @@ export class ServarrClient {
         );
       }
       throw new ApiError(
-        `${this.config.appName} network error for ${path}: ${(err as Error).message}`,
+        `${this.config.appName} network error for ${path}: ${describeTransportError(err)}`,
         { status: 0 },
       );
     } finally {

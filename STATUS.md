@@ -1,8 +1,20 @@
 # Status
 
-**Last updated:** 2026-08-12
+**Last updated:** 2026-08-18
 
 ## Phase
+
+**2026-08-18 — transport failures now surface their real cause
+(MCP-F08).** `ServarrClient.requestOnce()`'s network-error catch built its
+message from `(err as Error).message` only — on a real `fetch()` failure
+that's Node's generic `TypeError: fetch failed`, discarding the actual
+DNS/connection/TLS reason in `error.cause`. Found via a same-day fleet-wide
+sweep prompted by an equivalent live incident in downloader-mcp (a stale
+upstream URL stayed silently broken because every failure just said "fetch
+failed"). Fixed at the source: the canonical `src/shared/errors.ts` gained
+`describeTransportError()` (new fleet standard MCP-F08), copied in here
+verbatim and wired into `base.ts`'s catch block. Verified: typecheck, build,
+test:unit (74/74), lint, format:check all clean.
 
 **Fixed a spec violation that made the MCP look disconnected.** Reported as
 "servarr-mcp isn't connected"; the server was healthy the whole time. The
