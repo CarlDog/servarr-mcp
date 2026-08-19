@@ -4,6 +4,7 @@ services:
     pull_policy: always
     container_name: servarr-mcp
     restart: unless-stopped
+    network_mode: bridge
     ports:
       - "${HOST_PORT:-3002}:3000"
     # When the *arr apps run on the same host as this container, the
