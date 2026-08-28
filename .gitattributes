@@ -1,17 +1,36 @@
-# All source files normalized to LF in the repo — prettier config has
-# endOfLine: "lf", and CI's format:check runs on Linux where committed
-# CRLF would fail. Without this, Windows checkouts can silently commit
-# CRLF and break CI.
-*.ts text eol=lf
-*.js text eol=lf
-*.mjs text eol=lf
-*.cjs text eol=lf
-*.json text eol=lf
-*.md text eol=lf
-*.yml text eol=lf
-*.yaml text eol=lf
+# Canonical .gitattributes for fleet repos.
+#
+# Copy to the repo root as `.gitattributes` (note the leading dot — this
+# reference file is stored without it so it isn't itself active in fleet-kit).
+#
+# Why this exists: on a mixed Windows/Linux fleet with Linux CI, a developer's
+# core.autocrlf can check files out with CRLF. Prettier (endOfLine: lf) then
+# reports those files as "would reformat" locally, even though they are LF in
+# git and pass on Linux CI — a false "format debt" that nearly triggers an
+# unnecessary reformat. Forcing LF in the working copy makes local == CI.
+# See fleet/lessons/2026-07-24-crlf-vs-linux-ci.md.
+
+# Normalize everything to LF in the repo; let git decide text vs binary.
+* text=auto eol=lf
+
+# PowerShell stays platform-native (Windows tooling tolerates both, and some
+# PS hosts prefer CRLF).
+*.ps1 text eol=crlf
+
+# Explicit binaries — never touch line endings or diff as text.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.woff  binary
+*.woff2 binary
+
+# --- repo-specific additions below ---
 
 # OpenAPI spec snapshots come from GitHub raw with LF endings; locking
 # them prevents CRLF round-trip noise on Windows checkouts so diffs
-# from re-fetching stay reviewable.
+# from re-fetching stay reviewable. (Subsumed by the `* text=auto eol=lf`
+# rule above, kept explicit because the intent is not obvious.)
 docs/specs/*.json text eol=lf
