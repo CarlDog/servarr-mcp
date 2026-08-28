@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import express, { type Request, type Response } from "express";
 import { mountMcpHttp } from "./shared/http-transport.js";
+import { SERVER_VERSION } from "./shared/version.js";
 import { SonarrClient } from "./clients/sonarr.js";
 import { RadarrClient } from "./clients/radarr.js";
 import { LidarrClient } from "./clients/lidarr.js";
@@ -92,7 +93,7 @@ function createServer(): McpServer {
   const server = new McpServer(
     {
       name: "servarr-mcp",
-      version: "0.1.0",
+      version: SERVER_VERSION,
     },
     {
       instructions: INSTRUCTIONS,

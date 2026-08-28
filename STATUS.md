@@ -1,6 +1,16 @@
 # Status
 
-**Last updated:** 2026-08-18
+**Last updated:** 2026-08-28 — **released v0.1.0**, this repo's first tagged
+release, under the new fleet standard UNI-19. Adds the backfilled
+`CHANGELOG.md` UNI-12 requires, sets `flavor: latest=false` on the publish
+workflow so a release tag no longer republishes `:latest` and bounces the live
+stack, and derives the reported server version from `package.json`
+(`src/shared/version.ts` + `version-sync.test.ts`, MCP-T03) instead of a
+hand-maintained literal. Released at the manifest version — which had never
+moved off its scaffold default across 141 commits — rather than graduating to
+1.0.0; that stays a separate deliberate decision.
+
+Previous entry, 2026-08-18
 
 ## Phase
 
