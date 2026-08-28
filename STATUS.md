@@ -79,6 +79,18 @@ caps across siblings. Full detail in the OpenChronicle project's
 **102 tests** (62 unit / 40 integration), all green; typecheck/lint/
 format/build all clean.
 
+**2026-08-18 (later same day) — two small follow-ups.** Corrected a
+comment in `src/shared/errors.ts` that overstated undici's `fetch()`
+as immune to the cause-swallowing bug fixed above (MCP-F08) — only
+undici's low-level `request()` avoids it, verified empirically;
+`fetch()` still needs `describeTransportError()`. No behavior change.
+Separately, added `network_mode: bridge` to `docker-compose.yml`:
+this is a single-container stack with no cross-service Docker DNS
+need, and its dedicated per-project network was consuming one of the
+NAS's last available subnets (`docker-deployments.md` §11 — the
+fleet-wide address-pool-exhaustion migration). Joins the shared
+bridge network instead; no other compose behavior changes.
+
 ## Phase (previous — dependency majors + build fix)
 
 Security hardening across the outbound and inbound edges, plus two new
