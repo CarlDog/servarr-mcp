@@ -1,3 +1,5 @@
+// REQUIRED ENFORCEMENT TEST — standard MCP-T01.
+//
 // Coverage test: every registered tool must declare MCP annotations.
 // Catches future drift where a new tool ships without the safety/
 // discoverability hints (readOnlyHint, destructiveHint, etc.).
