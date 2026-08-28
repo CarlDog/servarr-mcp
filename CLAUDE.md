@@ -145,6 +145,18 @@ docker build -t servarr-mcp .
 
 ## Conventions
 
+- **`package.json` is `@carldog/servarr-mcp` and `private: true` — both
+  deliberate.** The unscoped name `servarr-mcp` was still free, but three
+  fleet repos lost theirs to unrelated packages before anyone thought to
+  check; a scope is reserved to the account, so no name inside it can be
+  taken. Nothing here publishes to npm: this ships as a container
+  (`ghcr.io/carldog/servarr-mcp`), there is no publish workflow and no
+  `NPM_TOKEN`, and `private: true` blocks an accidental publish while `bin`
+  + `files` advertise a publishable shape. If npx distribution is ever
+  wanted, drop the flag and add `"publishConfig": {"access": "public"}` —
+  scoped packages default to private, so a first publish without it fails
+  with a 402.
+
 - All logging goes to **stderr** (`console.error`). stdout is the MCP
   wire protocol — writing to it corrupts the transport.
 - Tool names: `<app>_<verb_noun>` (e.g. `sonarr_list_series`,

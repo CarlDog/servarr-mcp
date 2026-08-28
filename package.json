@@ -1,6 +1,7 @@
 {
-  "name": "servarr-mcp",
+  "name": "@carldog/servarr-mcp",
   "version": "0.1.0",
+  "private": true,
   "license": "MIT",
   "description": "MCP server for the Servarr stack (Sonarr, Radarr, Lidarr, Readarr, Prowlarr), packaged as a Docker container",
   "type": "module",
