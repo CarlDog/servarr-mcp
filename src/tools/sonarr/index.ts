@@ -15,6 +15,10 @@ import { registerReleaseTools } from "./releases.js";
 import { registerSeriesTools } from "./series.js";
 import { registerWantedTools } from "./wanted.js";
 import { registerSonarrManualImportTools } from "../manual-import.js";
+import {
+  registerProviderConfigTools,
+  SONARR_PROVIDER_CONFIG,
+} from "../provider-config.js";
 
 const SLIM_SERIES_FIELDS = [
   "id",
@@ -214,4 +218,5 @@ export function registerSonarrTools(
   registerSeriesTools(server, sonarr);
   registerReleaseTools(server, sonarr);
   registerSonarrManualImportTools(server, sonarr);
+  registerProviderConfigTools(server, sonarr, SONARR_PROVIDER_CONFIG);
 }

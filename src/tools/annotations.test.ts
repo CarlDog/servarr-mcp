@@ -57,6 +57,11 @@ describe("tool annotations", () => {
         },
         { pattern: /_release_search$/, field: "readOnlyHint", expected: true },
         { pattern: /_get_command$/, field: "readOnlyHint", expected: true },
+        {
+          pattern: /_list_(import_lists|notifications)$/,
+          field: "readOnlyHint",
+          expected: true,
+        },
         // writes: readOnlyHint must NOT be true (i.e., undefined or false)
         { pattern: /_grab_release$/, field: "readOnlyHint", expected: false },
         {
@@ -75,6 +80,11 @@ describe("tool annotations", () => {
           expected: false,
         },
         { pattern: /_refresh_[a-z]+$/, field: "readOnlyHint", expected: false },
+        {
+          pattern: /_set_(import_list_state|notification_manual_interaction)$/,
+          field: "readOnlyHint",
+          expected: false,
+        },
       ];
 
     for (const { pattern, field, expected } of checks) {
@@ -96,6 +106,7 @@ describe("tool annotations", () => {
       /_queue_remove$/,
       /_history_mark_failed$/,
       /_edit_[a-z]+$/,
+      /_set_(import_list_state|notification_manual_interaction)$/,
     ];
     for (const t of tools) {
       if (!destructiveSuffixes.some((p) => p.test(t.name))) continue;

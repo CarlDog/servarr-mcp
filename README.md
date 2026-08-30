@@ -33,6 +33,8 @@ Read:
 | `sonarr_get_episode` | Episode details by ID |
 | `sonarr_calendar` | Upcoming episodes |
 | `sonarr_queue` | Current download queue |
+| `sonarr_list_import_lists` | Compact/redacted import-list inspection |
+| `sonarr_list_notifications` | Compact/redacted notification and event inspection |
 | `sonarr_manual_import_candidates` | Discover bounded manual-import candidates with episode/file context |
 | `sonarr_history` | Recent history (newest first) |
 | `sonarr_history_series` | History for one series |
@@ -55,6 +57,8 @@ Write:
 | `sonarr_grab_release` | Grab a release from `sonarr_release_search` results |
 | `sonarr_manual_import` | Confirm-gated import of one exact candidate into explicit episode ids |
 | `sonarr_queue_remove` | Remove one queue item or a confirm-gated batch of up to 100 |
+| `sonarr_set_import_list_state` | Confirm-gated automatic-add state update |
+| `sonarr_set_notification_manual_interaction` | Confirm-gated manual-interaction event update |
 | `sonarr_queue_regrab` | Force re-grab of a stuck queue item |
 | `sonarr_history_mark_failed` | Mark a history record failed (triggers re-search) |
 | `sonarr_search_missing` | Trigger a search for missing episodes |
@@ -76,6 +80,8 @@ Read:
 | `radarr_lookup_imdb` | Look up a movie by IMDb ID |
 | `radarr_calendar` | Upcoming movie releases |
 | `radarr_queue` | Current download queue |
+| `radarr_list_import_lists` | Compact/redacted import-list inspection |
+| `radarr_list_notifications` | Compact/redacted notification and event inspection |
 | `radarr_manual_import_candidates` | Discover bounded manual-import candidates with movie/file context |
 | `radarr_history` | Recent history (newest first) |
 | `radarr_history_movie` | History for one movie |
@@ -98,6 +104,8 @@ Write:
 | `radarr_grab_release` | Grab a release from `radarr_release_search` results |
 | `radarr_manual_import` | Confirm-gated import of one exact candidate into an explicit movie id |
 | `radarr_queue_remove` | Remove one queue item or a confirm-gated batch of up to 100 |
+| `radarr_set_import_list_state` | Confirm-gated provider/automatic-add state update |
+| `radarr_set_notification_manual_interaction` | Confirm-gated manual-interaction event update |
 | `radarr_queue_regrab` | Force re-grab of a stuck queue item |
 | `radarr_history_mark_failed` | Mark a history record failed (triggers re-search) |
 | `radarr_search_missing` | Trigger a search for missing movies |
@@ -118,6 +126,8 @@ Read:
 | `lidarr_get_track` | Track details |
 | `lidarr_list_trackfiles` | Track files on disk |
 | `lidarr_queue` | Current download queue |
+| `lidarr_list_import_lists` | Compact/redacted import-list inspection |
+| `lidarr_list_notifications` | Compact/redacted notification and event inspection |
 | `lidarr_manual_import_candidates` | Discover bounded manual-import candidates with album/track context |
 | `lidarr_history` | Recent history |
 | `lidarr_history_artist` | History for one artist |
@@ -141,6 +151,7 @@ Write:
 | `lidarr_grab_release` | Grab a release from `lidarr_release_search` results |
 | `lidarr_manual_import` | Confirm-gated import with explicit artist/album/release/track ids and replacement choice |
 | `lidarr_queue_remove` | Remove one queue item or a confirm-gated batch of up to 100 |
+| `lidarr_set_import_list_state` | Confirm-gated automatic-add state update |
 | `lidarr_queue_regrab` | Force re-grab of a stuck queue item |
 | `lidarr_history_mark_failed` | Mark a history record failed (triggers re-search) |
 | `lidarr_search_missing` | Trigger a search for missing albums |
@@ -160,6 +171,8 @@ Read:
 | `readarr_list_books` | List books (optionally per-author) |
 | `readarr_get_book` | Book details by ID |
 | `readarr_queue` | Current download queue |
+| `readarr_list_import_lists` | Compact/redacted import-list inspection |
+| `readarr_list_notifications` | Compact/redacted notification and event inspection |
 | `readarr_manual_import_candidates` | Discover bounded manual-import candidates with book/edition context |
 | `readarr_history` | Recent history |
 | `readarr_history_author` | History for one author |
@@ -183,6 +196,7 @@ Write:
 | `readarr_grab_release` | Grab a release from `readarr_release_search` results |
 | `readarr_manual_import` | Confirm-gated import with explicit author/book/edition ids and replacement choice |
 | `readarr_queue_remove` | Remove one queue item or a confirm-gated batch of up to 100 |
+| `readarr_set_import_list_state` | Confirm-gated automatic-add state update |
 | `readarr_queue_regrab` | Force re-grab of a stuck queue item |
 | `readarr_history_mark_failed` | Mark a history record failed (triggers re-search) |
 | `readarr_search_missing` | Trigger a search for missing books |

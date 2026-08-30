@@ -9,6 +9,10 @@ import { registerQueueTools } from "./queue.js";
 import { registerReleaseTools } from "./releases.js";
 import { registerWantedTools } from "./wanted.js";
 import { registerReadarrManualImportTools } from "../manual-import.js";
+import {
+  READARR_PROVIDER_CONFIG,
+  registerProviderConfigTools,
+} from "../provider-config.js";
 
 export function registerReadarrTools(
   server: McpServer,
@@ -161,4 +165,5 @@ export function registerReadarrTools(
   registerAuthorTools(server, readarr);
   registerReleaseTools(server, readarr);
   registerReadarrManualImportTools(server, readarr);
+  registerProviderConfigTools(server, readarr, READARR_PROVIDER_CONFIG);
 }

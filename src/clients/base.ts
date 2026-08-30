@@ -233,6 +233,36 @@ export class ServarrClient {
     return this.request("/tag");
   }
 
+  async importLists(): Promise<unknown> {
+    return this.request("/importlist");
+  }
+
+  async importList(id: number): Promise<unknown> {
+    return this.request(`/importlist/${id}`);
+  }
+
+  async updateImportList(
+    id: number,
+    resource: Record<string, unknown>,
+  ): Promise<unknown> {
+    return this.requestPut(`/importlist/${id}`, resource);
+  }
+
+  async notifications(): Promise<unknown> {
+    return this.request("/notification");
+  }
+
+  async notification(id: number): Promise<unknown> {
+    return this.request(`/notification/${id}`);
+  }
+
+  async updateNotification(
+    id: number,
+    resource: Record<string, unknown>,
+  ): Promise<unknown> {
+    return this.requestPut(`/notification/${id}`, resource);
+  }
+
   async queue(page = 1, pageSize = 20): Promise<unknown> {
     return this.request("/queue", { page, pageSize });
   }
@@ -518,6 +548,16 @@ export const ANN_MANUAL_IMPORT = {
   destructiveHint: true,
   idempotentHint: false,
   openWorldHint: true,
+} as const;
+
+// Targeted provider-configuration updates. Re-applying the same state is a
+// no-op, but disabling an import list or notification event changes automation
+// behavior, so clients should treat it as a consequential destructive edit.
+export const ANN_CONFIG_EDIT = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: true,
+  openWorldHint: false,
 } as const;
 
 // Force re-grab of a stuck queue item. Each call spawns a fresh grab,
