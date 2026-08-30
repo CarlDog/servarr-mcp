@@ -43,4 +43,10 @@ export class ReadarrClient extends ServarrClient {
   async historyAuthor(authorId: number): Promise<unknown> {
     return this.request("/history/author", { authorId });
   }
+
+  async manualImportCandidates(
+    params: Record<string, string | number | boolean>,
+  ): Promise<unknown> {
+    return this.request("/manualimport", params);
+  }
 }

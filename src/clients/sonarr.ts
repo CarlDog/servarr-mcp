@@ -47,4 +47,10 @@ export class SonarrClient extends ServarrClient {
     if (end) params.end = end;
     return this.request("/calendar", params);
   }
+
+  async manualImportCandidates(
+    params: Record<string, string | number | boolean>,
+  ): Promise<unknown> {
+    return this.request("/manualimport", params);
+  }
 }

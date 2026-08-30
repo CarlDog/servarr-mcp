@@ -14,6 +14,7 @@ import { registerHistoryTools } from "./history.js";
 import { registerQueueTools } from "./queue.js";
 import { registerReleaseTools } from "./releases.js";
 import { registerWantedTools } from "./wanted.js";
+import { registerLidarrManualImportTools } from "../manual-import.js";
 
 const SLIM_ARTIST_FIELDS = [
   "id",
@@ -308,4 +309,5 @@ export function registerLidarrTools(
   registerCommandTools(server, lidarr);
   registerArtistTools(server, lidarr);
   registerReleaseTools(server, lidarr);
+  registerLidarrManualImportTools(server, lidarr);
 }

@@ -47,4 +47,10 @@ export class RadarrClient extends ServarrClient {
   async historyMovie(movieId: number): Promise<unknown> {
     return this.request("/history/movie", { movieId });
   }
+
+  async manualImportCandidates(
+    params: Record<string, string | number | boolean>,
+  ): Promise<unknown> {
+    return this.request("/manualimport", params);
+  }
 }

@@ -14,6 +14,7 @@ import { registerMovieTools } from "./movies.js";
 import { registerQueueTools } from "./queue.js";
 import { registerReleaseTools } from "./releases.js";
 import { registerWantedTools } from "./wanted.js";
+import { registerRadarrManualImportTools } from "../manual-import.js";
 
 const SLIM_MOVIE_FIELDS = [
   "id",
@@ -210,4 +211,5 @@ export function registerRadarrTools(
   registerCommandTools(server, radarr);
   registerMovieTools(server, radarr);
   registerReleaseTools(server, radarr);
+  registerRadarrManualImportTools(server, radarr);
 }

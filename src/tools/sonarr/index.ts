@@ -14,6 +14,7 @@ import { registerQueueTools } from "./queue.js";
 import { registerReleaseTools } from "./releases.js";
 import { registerSeriesTools } from "./series.js";
 import { registerWantedTools } from "./wanted.js";
+import { registerSonarrManualImportTools } from "../manual-import.js";
 
 const SLIM_SERIES_FIELDS = [
   "id",
@@ -212,4 +213,5 @@ export function registerSonarrTools(
   registerCommandTools(server, sonarr);
   registerSeriesTools(server, sonarr);
   registerReleaseTools(server, sonarr);
+  registerSonarrManualImportTools(server, sonarr);
 }

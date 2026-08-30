@@ -484,6 +484,15 @@ export const ANN_QUEUE_REMOVE = {
   openWorldHint: true,
 } as const;
 
+// Manual import moves/copies a downloaded file into the library and may
+// replace an existing media file. Repeating it is not safely idempotent.
+export const ANN_MANUAL_IMPORT = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: false,
+  openWorldHint: true,
+} as const;
+
 // Force re-grab of a stuck queue item. Each call spawns a fresh grab,
 // so not idempotent.
 export const ANN_QUEUE_REGRAB = {

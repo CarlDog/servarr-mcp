@@ -59,4 +59,10 @@ export class LidarrClient extends ServarrClient {
     if (opts.unmapped !== undefined) params.unmapped = opts.unmapped;
     return this.request("/trackfile", params);
   }
+
+  async manualImportCandidates(
+    params: Record<string, string | number | boolean>,
+  ): Promise<unknown> {
+    return this.request("/manualimport", params);
+  }
 }

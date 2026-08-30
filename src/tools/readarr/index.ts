@@ -8,6 +8,7 @@ import { registerHistoryTools } from "./history.js";
 import { registerQueueTools } from "./queue.js";
 import { registerReleaseTools } from "./releases.js";
 import { registerWantedTools } from "./wanted.js";
+import { registerReadarrManualImportTools } from "../manual-import.js";
 
 export function registerReadarrTools(
   server: McpServer,
@@ -159,4 +160,5 @@ export function registerReadarrTools(
   registerCommandTools(server, readarr);
   registerAuthorTools(server, readarr);
   registerReleaseTools(server, readarr);
+  registerReadarrManualImportTools(server, readarr);
 }

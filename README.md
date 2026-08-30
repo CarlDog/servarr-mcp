@@ -33,6 +33,7 @@ Read:
 | `sonarr_get_episode` | Episode details by ID |
 | `sonarr_calendar` | Upcoming episodes |
 | `sonarr_queue` | Current download queue |
+| `sonarr_manual_import_candidates` | Discover bounded manual-import candidates with episode/file context |
 | `sonarr_history` | Recent history (newest first) |
 | `sonarr_history_series` | History for one series |
 | `sonarr_wanted_missing` | Monitored episodes with no file |
@@ -52,6 +53,7 @@ Write:
 | `sonarr_add_series` | Add a series to the library |
 | `sonarr_edit_series` | Edit a tracked series (monitoring, profile, etc.) |
 | `sonarr_grab_release` | Grab a release from `sonarr_release_search` results |
+| `sonarr_manual_import` | Confirm-gated import of one exact candidate into explicit episode ids |
 | `sonarr_queue_remove` | Remove a queue item (optionally blocklist / delete from client) |
 | `sonarr_queue_regrab` | Force re-grab of a stuck queue item |
 | `sonarr_history_mark_failed` | Mark a history record failed (triggers re-search) |
@@ -74,6 +76,7 @@ Read:
 | `radarr_lookup_imdb` | Look up a movie by IMDb ID |
 | `radarr_calendar` | Upcoming movie releases |
 | `radarr_queue` | Current download queue |
+| `radarr_manual_import_candidates` | Discover bounded manual-import candidates with movie/file context |
 | `radarr_history` | Recent history (newest first) |
 | `radarr_history_movie` | History for one movie |
 | `radarr_wanted_missing` | Monitored movies with no file |
@@ -93,6 +96,7 @@ Write:
 | `radarr_add_movie` | Add a movie to the library |
 | `radarr_edit_movie` | Edit a tracked movie (monitoring, profile, etc.) |
 | `radarr_grab_release` | Grab a release from `radarr_release_search` results |
+| `radarr_manual_import` | Confirm-gated import of one exact candidate into an explicit movie id |
 | `radarr_queue_remove` | Remove a queue item (optionally blocklist / delete from client) |
 | `radarr_queue_regrab` | Force re-grab of a stuck queue item |
 | `radarr_history_mark_failed` | Mark a history record failed (triggers re-search) |
@@ -114,6 +118,7 @@ Read:
 | `lidarr_get_track` | Track details |
 | `lidarr_list_trackfiles` | Track files on disk |
 | `lidarr_queue` | Current download queue |
+| `lidarr_manual_import_candidates` | Discover bounded manual-import candidates with album/track context |
 | `lidarr_history` | Recent history |
 | `lidarr_history_artist` | History for one artist |
 | `lidarr_wanted_missing` | Monitored albums with no files |
@@ -134,6 +139,7 @@ Write:
 | `lidarr_add_artist` | Add an artist to the library |
 | `lidarr_edit_artist` | Edit a tracked artist (monitoring, profiles, etc.) |
 | `lidarr_grab_release` | Grab a release from `lidarr_release_search` results |
+| `lidarr_manual_import` | Confirm-gated import with explicit artist/album/release/track ids and replacement choice |
 | `lidarr_queue_remove` | Remove a queue item (optionally blocklist / delete from client) |
 | `lidarr_queue_regrab` | Force re-grab of a stuck queue item |
 | `lidarr_history_mark_failed` | Mark a history record failed (triggers re-search) |
@@ -154,6 +160,7 @@ Read:
 | `readarr_list_books` | List books (optionally per-author) |
 | `readarr_get_book` | Book details by ID |
 | `readarr_queue` | Current download queue |
+| `readarr_manual_import_candidates` | Discover bounded manual-import candidates with book/edition context |
 | `readarr_history` | Recent history |
 | `readarr_history_author` | History for one author |
 | `readarr_wanted_missing` | Monitored books with no files |
@@ -174,6 +181,7 @@ Write:
 | `readarr_add_author` | Add an author to the library |
 | `readarr_edit_author` | Edit a tracked author (monitoring, profiles, etc.) |
 | `readarr_grab_release` | Grab a release from `readarr_release_search` results |
+| `readarr_manual_import` | Confirm-gated import with explicit author/book/edition ids and replacement choice |
 | `readarr_queue_remove` | Remove a queue item (optionally blocklist / delete from client) |
 | `readarr_queue_regrab` | Force re-grab of a stuck queue item |
 | `readarr_history_mark_failed` | Mark a history record failed (triggers re-search) |
