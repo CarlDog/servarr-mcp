@@ -189,14 +189,18 @@ export class ServarrClient {
   protected async requestDelete(
     path: string,
     params: Record<string, string | number | boolean> = {},
+    body?: unknown,
   ): Promise<void> {
     const url = this.buildUrl(path, params);
+    const headers: Record<string, string> = {
+      "X-Api-Key": this.config.apiKey,
+      Accept: "application/json",
+    };
+    if (body !== undefined) headers["Content-Type"] = "application/json";
     await this.requestOnce(path, url, {
       method: "DELETE",
-      headers: {
-        "X-Api-Key": this.config.apiKey,
-        Accept: "application/json",
-      },
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
     // Servarr DELETE endpoints typically return 200/204 with no body.
   }
@@ -254,6 +258,29 @@ export class ServarrClient {
       params.changeCategory = opts.changeCategory;
     }
     await this.requestDelete(`/queue/${id}`, params);
+  }
+
+  async queueRemoveBulk(
+    ids: number[],
+    opts: {
+      removeFromClient?: boolean;
+      blocklist?: boolean;
+      skipRedownload?: boolean;
+      changeCategory?: boolean;
+    } = {},
+  ): Promise<void> {
+    const params: Record<string, boolean> = {};
+    if (opts.removeFromClient !== undefined) {
+      params.removeFromClient = opts.removeFromClient;
+    }
+    if (opts.blocklist !== undefined) params.blocklist = opts.blocklist;
+    if (opts.skipRedownload !== undefined) {
+      params.skipRedownload = opts.skipRedownload;
+    }
+    if (opts.changeCategory !== undefined) {
+      params.changeCategory = opts.changeCategory;
+    }
+    await this.requestDelete("/queue/bulk", params, { ids });
   }
 
   async queueRegrab(id: number): Promise<unknown> {

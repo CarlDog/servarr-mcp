@@ -54,7 +54,7 @@ Write:
 | `sonarr_edit_series` | Edit a tracked series (monitoring, profile, etc.) |
 | `sonarr_grab_release` | Grab a release from `sonarr_release_search` results |
 | `sonarr_manual_import` | Confirm-gated import of one exact candidate into explicit episode ids |
-| `sonarr_queue_remove` | Remove a queue item (optionally blocklist / delete from client) |
+| `sonarr_queue_remove` | Remove one queue item or a confirm-gated batch of up to 100 |
 | `sonarr_queue_regrab` | Force re-grab of a stuck queue item |
 | `sonarr_history_mark_failed` | Mark a history record failed (triggers re-search) |
 | `sonarr_search_missing` | Trigger a search for missing episodes |
@@ -97,7 +97,7 @@ Write:
 | `radarr_edit_movie` | Edit a tracked movie (monitoring, profile, etc.) |
 | `radarr_grab_release` | Grab a release from `radarr_release_search` results |
 | `radarr_manual_import` | Confirm-gated import of one exact candidate into an explicit movie id |
-| `radarr_queue_remove` | Remove a queue item (optionally blocklist / delete from client) |
+| `radarr_queue_remove` | Remove one queue item or a confirm-gated batch of up to 100 |
 | `radarr_queue_regrab` | Force re-grab of a stuck queue item |
 | `radarr_history_mark_failed` | Mark a history record failed (triggers re-search) |
 | `radarr_search_missing` | Trigger a search for missing movies |
@@ -140,7 +140,7 @@ Write:
 | `lidarr_edit_artist` | Edit a tracked artist (monitoring, profiles, etc.) |
 | `lidarr_grab_release` | Grab a release from `lidarr_release_search` results |
 | `lidarr_manual_import` | Confirm-gated import with explicit artist/album/release/track ids and replacement choice |
-| `lidarr_queue_remove` | Remove a queue item (optionally blocklist / delete from client) |
+| `lidarr_queue_remove` | Remove one queue item or a confirm-gated batch of up to 100 |
 | `lidarr_queue_regrab` | Force re-grab of a stuck queue item |
 | `lidarr_history_mark_failed` | Mark a history record failed (triggers re-search) |
 | `lidarr_search_missing` | Trigger a search for missing albums |
@@ -182,7 +182,7 @@ Write:
 | `readarr_edit_author` | Edit a tracked author (monitoring, profiles, etc.) |
 | `readarr_grab_release` | Grab a release from `readarr_release_search` results |
 | `readarr_manual_import` | Confirm-gated import with explicit author/book/edition ids and replacement choice |
-| `readarr_queue_remove` | Remove a queue item (optionally blocklist / delete from client) |
+| `readarr_queue_remove` | Remove one queue item or a confirm-gated batch of up to 100 |
 | `readarr_queue_regrab` | Force re-grab of a stuck queue item |
 | `readarr_history_mark_failed` | Mark a history record failed (triggers re-search) |
 | `readarr_search_missing` | Trigger a search for missing books |

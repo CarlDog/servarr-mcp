@@ -7,6 +7,7 @@ import {
   asText,
 } from "../../clients/base.js";
 import type { SonarrClient } from "../../clients/sonarr.js";
+import { handleQueueRemove, queueRemoveInputSchema } from "../queue-remove.js";
 
 export function registerQueueTools(
   server: McpServer,
@@ -43,55 +44,11 @@ export function registerQueueTools(
     {
       title: "Sonarr: Remove from Queue",
       description:
-        "Remove a single item from Sonarr's download queue. All four flags are exposed because the server-side defaults are not obviously safe — in particular, removeFromClient defaults to true on Sonarr's side, which deletes the file from the download client. This tool defaults remove_from_client to false; flip it explicitly if you want the file gone.",
-      inputSchema: {
-        id: z
-          .number()
-          .int()
-          .describe("The Sonarr queue item id (from sonarr_queue)."),
-        remove_from_client: z
-          .boolean()
-          .optional()
-          .describe(
-            "Tell the download client to delete the download too (default false — flips Sonarr's destructive server-side default of true).",
-          ),
-        blocklist: z
-          .boolean()
-          .optional()
-          .describe(
-            "Add the release to the blocklist so Sonarr doesn't re-grab it (default false).",
-          ),
-        skip_redownload: z
-          .boolean()
-          .optional()
-          .describe(
-            "Don't trigger a re-search for a replacement (default false).",
-          ),
-        change_category: z
-          .boolean()
-          .optional()
-          .describe(
-            "Move the download to the recycle/'tv-recycle' category in the client (if configured) instead of deleting (default false).",
-          ),
-      },
+        "Remove one Sonarr queue item with id, or 1-100 unique items in one server-side request with ids and confirm: true. Bulk processing is not a database transaction and returns no per-id upstream result. remove_from_client safely defaults to false instead of Sonarr's destructive true default.",
+      inputSchema: queueRemoveInputSchema,
       annotations: ANN_QUEUE_REMOVE,
     },
-    async ({
-      id,
-      remove_from_client = false,
-      blocklist = false,
-      skip_redownload = false,
-      change_category = false,
-    }) => {
-      const opts = {
-        removeFromClient: remove_from_client,
-        blocklist,
-        skipRedownload: skip_redownload,
-        changeCategory: change_category,
-      };
-      await sonarr.queueRemove(id, opts);
-      return asText({ removed: true, id, options: opts });
-    },
+    async (args) => handleQueueRemove(sonarr, args),
   );
 
   server.registerTool(
