@@ -2,6 +2,10 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ANN_ADD, ANN_EDIT, asText } from "../../clients/base.js";
 import type { SonarrClient } from "../../clients/sonarr.js";
+import {
+  applyServarrPathEdit,
+  assertServarrPathEditApplied,
+} from "../edit-path.js";
 
 // Sonarr's MonitorType — values that make sense to expose. Omitting
 // pilot/recent/monitorSpecials/unmonitorSpecials/unknown for v1.
@@ -236,7 +240,7 @@ export function registerSeriesTools(
       title: "Sonarr: Edit Series",
       description:
         "Edit settings on an existing Sonarr series. Internally GETs the current SeriesResource, applies your changes, and PUTs the full resource back. Pass only the fields you want to change — others are preserved. " +
-        "root_folder_path changes the parent folder Sonarr computes the series' path under; path sets the full on-disk folder path directly (e.g. to fix a case-sensitivity or mount-alias mismatch) without that recalculation. Either can trigger a file move — controlled by move_files, which this tool always passes explicitly and defaults to false, so a metadata-only correction (path and/or root_folder_path with move_files left at its default) never touches files on disk. Set move_files: true only when you intend an actual relocation.",
+        "root_folder_path rebases the series' existing leaf folder under the new root and sends the derived full path explicitly; path overrides that derivation with an exact full on-disk folder path. The tool verifies the returned SeriesResource reports the requested path instead of accepting a silent no-op. Either can trigger a file move — controlled by move_files, which this tool always passes explicitly and defaults to false, so a metadata-only correction with move_files left at its default never touches files on disk. Set move_files: true only when you intend an actual relocation.",
       inputSchema: {
         id: z
           .number()
@@ -259,13 +263,13 @@ export function registerSeriesTools(
           .string()
           .optional()
           .describe(
-            "Change the root folder (from sonarr_list_root_folders). Sonarr recomputes the series' full path under this root. See move_files.",
+            "Change the root folder (from sonarr_list_root_folders). The tool preserves the current leaf folder name, derives the full destination path under this root, and sends both fields. See move_files.",
           ),
         path: z
           .string()
           .optional()
           .describe(
-            "Directly set the series' full on-disk folder path as a string, bypassing root_folder_path's recalculation. Use for metadata-only corrections (e.g. a case or mount-alias fix) — combine with the default move_files: false so Sonarr updates its record without touching files.",
+            "Set the series' exact full on-disk folder path instead of deriving it from root_folder_path. Use for metadata-only corrections (e.g. a case or mount-alias fix) — combine with the default move_files: false so Sonarr updates its record without touching files.",
           ),
         move_files: z
           .boolean()
@@ -302,13 +306,16 @@ export function registerSeriesTools(
       if (quality_profile_id !== undefined) {
         updated.qualityProfileId = quality_profile_id;
       }
-      if (root_folder_path !== undefined) {
-        updated.rootFolderPath = root_folder_path;
-      }
-      if (path !== undefined) updated.path = path;
+      const expectedPath = applyServarrPathEdit(updated, {
+        rootFolderPath: root_folder_path,
+        path,
+        resourceName: "Sonarr series",
+      });
       if (season_folder !== undefined) updated.seasonFolder = season_folder;
       if (tags !== undefined) updated.tags = tags;
-      return asText(await sonarr.editSeries(id, updated, move_files ?? false));
+      const result = await sonarr.editSeries(id, updated, move_files ?? false);
+      assertServarrPathEditApplied(result, expectedPath, "Sonarr series");
+      return asText(result);
     },
   );
 }
