@@ -8,6 +8,7 @@ import {
   paginate,
   pickFields,
 } from "../_paging.js";
+import { asRecordArray, projectRecordArray } from "../list-projection.js";
 import { registerCommandTools } from "./commands.js";
 import { registerHistoryTools } from "./history.js";
 import { registerQueueTools } from "./queue.js";
@@ -40,6 +41,22 @@ const SLIM_SERIES_FIELDS = [
   "runtime",
   "seasonFolder",
   "statistics",
+] as const;
+
+const SLIM_EPISODE_FIELDS = [
+  "id",
+  "seriesId",
+  "tvdbId",
+  "episodeFileId",
+  "seasonNumber",
+  "episodeNumber",
+  "title",
+  "airDate",
+  "airDateUtc",
+  "runtime",
+  "hasFile",
+  "monitored",
+  "absoluteEpisodeNumber",
 ] as const;
 
 export function registerSonarrTools(
@@ -113,14 +130,43 @@ export function registerSonarrTools(
     "sonarr_list_episodes",
     {
       title: "Sonarr: List Episodes",
-      description:
-        "List every episode for a Sonarr series. Returns episode ids you can drill into with `sonarr_get_episode` or pass to `sonarr_release_search` / `sonarr_search_episode`.",
+      description: `List episodes for a Sonarr series as a paged result. Default returns slim fields (${SLIM_EPISODE_FIELDS.join(", ")}); set verbose=true for full EpisodeResources including overview, images, ratings, and embedded file details. Returns episode ids you can drill into with \`sonarr_get_episode\` or pass to \`sonarr_release_search\` / \`sonarr_search_episode\`. Sonarr returns all episodes for the series upstream, so paging limits MCP output rather than upstream load.`,
       inputSchema: {
         series_id: z.number().int().describe("The Sonarr series ID"),
+        page: z
+          .number()
+          .int()
+          .min(1)
+          .optional()
+          .describe("Page number, 1-indexed (default 1)."),
+        page_size: z
+          .number()
+          .int()
+          .min(1)
+          .max(MAX_PAGE_SIZE)
+          .optional()
+          .describe(
+            `Items per page (default ${DEFAULT_PAGE_SIZE}, max ${MAX_PAGE_SIZE}).`,
+          ),
+        verbose: z
+          .boolean()
+          .optional()
+          .describe("Return full EpisodeResources. Default false."),
       },
       annotations: ANN_READ,
     },
-    async ({ series_id }) => asText(await sonarr.listEpisodes(series_id)),
+    async ({
+      series_id,
+      page = 1,
+      page_size = DEFAULT_PAGE_SIZE,
+      verbose = false,
+    }) => {
+      const episodes = await sonarr.listEpisodes(series_id);
+      const projected = verbose
+        ? asRecordArray(episodes, "Episode endpoint")
+        : projectRecordArray(episodes, SLIM_EPISODE_FIELDS, "Episode endpoint");
+      return asText(paginate(projected, page, page_size));
+    },
   );
 
   server.registerTool(

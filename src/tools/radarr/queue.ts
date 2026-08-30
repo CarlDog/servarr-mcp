@@ -7,6 +7,7 @@ import {
   asText,
 } from "../../clients/base.js";
 import type { RadarrClient } from "../../clients/radarr.js";
+import { projectQueuePage } from "../list-projection.js";
 import { handleQueueRemove, queueRemoveInputSchema } from "../queue-remove.js";
 
 export function registerQueueTools(
@@ -18,7 +19,7 @@ export function registerQueueTools(
     {
       title: "Radarr: Queue",
       description:
-        "Get the current Radarr download queue, paged. Default returns the first 20 records. Bump page_size or step through pages when the queue is large.",
+        "Get the current Radarr download queue, paged. Default returns compact identity/state/error fields while preserving statusMessages; set verbose=true for full queue resources including quality and custom-format detail.",
       inputSchema: {
         page: z
           .number()
@@ -33,10 +34,16 @@ export function registerQueueTools(
           .max(100)
           .optional()
           .describe("Records per page (default 20, max 100)."),
+        verbose: z.boolean().optional().describe("Return full queue records."),
       },
       annotations: ANN_READ,
     },
-    async ({ page, page_size }) => asText(await radarr.queue(page, page_size)),
+    async ({ page, page_size, verbose = false }) => {
+      const queue = await radarr.queue(page, page_size);
+      return asText(
+        verbose ? queue : projectQueuePage(queue, ["movieId", "movieHasFile"]),
+      );
+    },
   );
 
   server.registerTool(

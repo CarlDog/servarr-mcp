@@ -2,6 +2,8 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ANN_READ, ANN_READ_EXT, asText } from "../../clients/base.js";
 import type { ReadarrClient } from "../../clients/readarr.js";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginate } from "../_paging.js";
+import { asRecordArray, projectRecordArray } from "../list-projection.js";
 import { registerAuthorTools } from "./authors.js";
 import { registerCommandTools } from "./commands.js";
 import { registerHistoryTools } from "./history.js";
@@ -15,6 +17,36 @@ import {
 } from "../provider-config.js";
 import { registerRootAuditTool } from "../root-audit.js";
 
+const SLIM_AUTHOR_FIELDS = [
+  "id",
+  "authorName",
+  "foreignAuthorId",
+  "monitored",
+  "qualityProfileId",
+  "metadataProfileId",
+  "tags",
+  "path",
+  "status",
+  "ended",
+  "sortName",
+  "statistics",
+] as const;
+
+const SLIM_BOOK_FIELDS = [
+  "id",
+  "title",
+  "authorTitle",
+  "seriesTitle",
+  "authorId",
+  "foreignBookId",
+  "foreignEditionId",
+  "monitored",
+  "anyEditionOk",
+  "releaseDate",
+  "pageCount",
+  "statistics",
+] as const;
+
 export function registerReadarrTools(
   server: McpServer,
   readarr: ReadarrClient,
@@ -23,12 +55,21 @@ export function registerReadarrTools(
     "readarr_list_authors",
     {
       title: "Readarr: List Authors",
-      description:
-        "List every author tracked by Readarr (id, name, monitored state, book counts). Use to scan or filter the library; for one specific author use `readarr_get_author`. To find an author NOT yet tracked, use `readarr_lookup_author` (Goodreads metadata).",
-      inputSchema: {},
+      description: `List tracked Readarr authors as a paged result. Default returns slim fields (${SLIM_AUTHOR_FIELDS.join(", ")}); set verbose=true for full AuthorResources. Readarr returns the entire library upstream, so paging limits MCP output rather than upstream load.`,
+      inputSchema: {
+        page: z.number().int().min(1).optional(),
+        page_size: z.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
+        verbose: z.boolean().optional(),
+      },
       annotations: ANN_READ,
     },
-    async () => asText(await readarr.listAuthors()),
+    async ({ page = 1, page_size = DEFAULT_PAGE_SIZE, verbose = false }) => {
+      const authors = await readarr.listAuthors();
+      const projected = verbose
+        ? asRecordArray(authors, "Author endpoint")
+        : projectRecordArray(authors, SLIM_AUTHOR_FIELDS, "Author endpoint");
+      return asText(paginate(projected, page, page_size));
+    },
   );
 
   server.registerTool(
@@ -59,18 +100,31 @@ export function registerReadarrTools(
     "readarr_list_books",
     {
       title: "Readarr: List Books",
-      description:
-        "List books tracked by Readarr, optionally filtered to a single author. Returns book ids you can drill into with `readarr_get_book` or pass to `readarr_release_search`.",
+      description: `List tracked Readarr books as a paged result, optionally filtered to one author. Default returns slim fields (${SLIM_BOOK_FIELDS.join(", ")}) and omits embedded author, editions, images, links, ratings, and overview; set verbose=true for full BookResources.`,
       inputSchema: {
         author_id: z
           .number()
           .int()
           .optional()
           .describe("Optional author ID filter"),
+        page: z.number().int().min(1).optional(),
+        page_size: z.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
+        verbose: z.boolean().optional(),
       },
       annotations: ANN_READ,
     },
-    async ({ author_id }) => asText(await readarr.listBooks(author_id)),
+    async ({
+      author_id,
+      page = 1,
+      page_size = DEFAULT_PAGE_SIZE,
+      verbose = false,
+    }) => {
+      const books = await readarr.listBooks(author_id);
+      const projected = verbose
+        ? asRecordArray(books, "Book endpoint")
+        : projectRecordArray(books, SLIM_BOOK_FIELDS, "Book endpoint");
+      return asText(paginate(projected, page, page_size));
+    },
   );
 
   server.registerTool(

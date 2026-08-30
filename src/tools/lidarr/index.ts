@@ -8,6 +8,7 @@ import {
   paginate,
   pickFields,
 } from "../_paging.js";
+import { asRecordArray, projectRecordArray } from "../list-projection.js";
 import { registerArtistTools } from "./artists.js";
 import { registerCommandTools } from "./commands.js";
 import { registerHistoryTools } from "./history.js";
@@ -50,6 +51,19 @@ const SLIM_ALBUM_FIELDS = [
   "duration",
   "anyReleaseOk",
   "statistics",
+] as const;
+
+const SLIM_TRACK_FILE_FIELDS = [
+  "id",
+  "artistId",
+  "albumId",
+  "path",
+  "size",
+  "dateAdded",
+  "quality",
+  "customFormatScore",
+  "indexerFlags",
+  "qualityCutoffNotMet",
 ] as const;
 
 export function registerLidarrTools(
@@ -205,7 +219,7 @@ export function registerLidarrTools(
     {
       title: "Lidarr: List Track Files",
       description:
-        "List Lidarr track files (the actual audio files on disk). Optionally filter by artist_id, album_id, or unmapped (orphan files Lidarr knows about but hasn't matched to a track). The unmapped=true mode is the standard 'find orphans on disk' query — pairs naturally with filesystem inspection of the music root to reconcile what's on disk vs. what Lidarr is tracking.",
+        "List Lidarr track files as a paged result. Requires artist_id, album_id, or unmapped=true because Lidarr rejects unscoped track-file reads. Default returns slim file/path/quality fields and omits mediaInfo/customFormats; set verbose=true for full TrackFileResources. The unmapped=true mode finds orphan files Lidarr knows about but has not matched to a track.",
       inputSchema: {
         artist_id: z
           .number()
@@ -223,17 +237,59 @@ export function registerLidarrTools(
           .describe(
             "When true, return only orphan files (on disk but not linked to any track).",
           ),
+        page: z
+          .number()
+          .int()
+          .min(1)
+          .optional()
+          .describe("Page number, 1-indexed (default 1)."),
+        page_size: z
+          .number()
+          .int()
+          .min(1)
+          .max(MAX_PAGE_SIZE)
+          .optional()
+          .describe(
+            `Items per page (default ${DEFAULT_PAGE_SIZE}, max ${MAX_PAGE_SIZE}).`,
+          ),
+        verbose: z
+          .boolean()
+          .optional()
+          .describe("Return full TrackFileResources. Default false."),
       },
       annotations: ANN_READ,
     },
-    async ({ artist_id, album_id, unmapped }) =>
-      asText(
-        await lidarr.listTrackfiles({
-          artistId: artist_id,
-          albumId: album_id,
-          unmapped,
-        }),
-      ),
+    async ({
+      artist_id,
+      album_id,
+      unmapped,
+      page = 1,
+      page_size = DEFAULT_PAGE_SIZE,
+      verbose = false,
+    }) => {
+      if (
+        artist_id === undefined &&
+        album_id === undefined &&
+        unmapped !== true
+      ) {
+        throw new Error(
+          "artist_id, album_id, or unmapped=true is required by Lidarr",
+        );
+      }
+      const trackFiles = await lidarr.listTrackfiles({
+        artistId: artist_id,
+        albumId: album_id,
+        unmapped,
+      });
+      const projected = verbose
+        ? asRecordArray(trackFiles, "Track-file endpoint")
+        : projectRecordArray(
+            trackFiles,
+            SLIM_TRACK_FILE_FIELDS,
+            "Track-file endpoint",
+          );
+      return asText(paginate(projected, page, page_size));
+    },
   );
 
   server.registerTool(

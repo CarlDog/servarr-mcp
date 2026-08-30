@@ -2,6 +2,24 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ANN_READ, ANN_READ_EXT, asText } from "../../clients/base.js";
 import type { ProwlarrClient } from "../../clients/prowlarr.js";
+import { projectRecordArray } from "../list-projection.js";
+
+const SLIM_INDEXER_FIELDS = [
+  "id",
+  "name",
+  "implementationName",
+  "implementation",
+  "protocol",
+  "privacy",
+  "enable",
+  "supportsRss",
+  "supportsSearch",
+  "supportsRedirect",
+  "supportsPagination",
+  "priority",
+  "appProfileId",
+  "tags",
+] as const;
 
 export function registerProwlarrTools(
   server: McpServer,
@@ -11,12 +29,18 @@ export function registerProwlarrTools(
     "prowlarr_list_indexers",
     {
       title: "Prowlarr: List Indexers",
-      description:
-        "List every indexer configured in Prowlarr — id, name, protocol, enabled state, categories. Cross-reference with `prowlarr_indexer_stats` for query/grab counts and `prowlarr_indexer_status` for actionable failure detail.",
+      description: `List configured Prowlarr indexers using compact operational fields (${SLIM_INDEXER_FIELDS.join(", ")}). Opaque provider configuration fields are always omitted because they can contain credentials/passkeys and make routine output excessively large. Cross-reference with \`prowlarr_indexer_stats\` for query/grab counts and \`prowlarr_indexer_status\` for actionable failure detail.`,
       inputSchema: {},
       annotations: ANN_READ,
     },
-    async () => asText(await prowlarr.listIndexers()),
+    async () =>
+      asText(
+        projectRecordArray(
+          await prowlarr.listIndexers(),
+          SLIM_INDEXER_FIELDS,
+          "Indexer endpoint",
+        ),
+      ),
   );
 
   server.registerTool(
