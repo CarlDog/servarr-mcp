@@ -19,6 +19,7 @@ import {
   LIDARR_PROVIDER_CONFIG,
   registerProviderConfigTools,
 } from "../provider-config.js";
+import { registerRootAuditTool } from "../root-audit.js";
 
 const SLIM_ARTIST_FIELDS = [
   "id",
@@ -315,4 +316,10 @@ export function registerLidarrTools(
   registerReleaseTools(server, lidarr);
   registerLidarrManualImportTools(server, lidarr);
   registerProviderConfigTools(server, lidarr, LIDARR_PROVIDER_CONFIG);
+  registerRootAuditTool(server, lidarr, {
+    prefix: "lidarr",
+    appName: "Lidarr",
+    entityName: "artists",
+    listEntities: (client) => client.listArtists(),
+  });
 }

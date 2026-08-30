@@ -19,6 +19,7 @@ import {
   RADARR_PROVIDER_CONFIG,
   registerProviderConfigTools,
 } from "../provider-config.js";
+import { registerRootAuditTool } from "../root-audit.js";
 
 const SLIM_MOVIE_FIELDS = [
   "id",
@@ -217,4 +218,10 @@ export function registerRadarrTools(
   registerReleaseTools(server, radarr);
   registerRadarrManualImportTools(server, radarr);
   registerProviderConfigTools(server, radarr, RADARR_PROVIDER_CONFIG);
+  registerRootAuditTool(server, radarr, {
+    prefix: "radarr",
+    appName: "Radarr",
+    entityName: "movies",
+    listEntities: (client) => client.listMovies(),
+  });
 }

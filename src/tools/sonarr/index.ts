@@ -19,6 +19,7 @@ import {
   registerProviderConfigTools,
   SONARR_PROVIDER_CONFIG,
 } from "../provider-config.js";
+import { registerRootAuditTool } from "../root-audit.js";
 
 const SLIM_SERIES_FIELDS = [
   "id",
@@ -219,4 +220,10 @@ export function registerSonarrTools(
   registerReleaseTools(server, sonarr);
   registerSonarrManualImportTools(server, sonarr);
   registerProviderConfigTools(server, sonarr, SONARR_PROVIDER_CONFIG);
+  registerRootAuditTool(server, sonarr, {
+    prefix: "sonarr",
+    appName: "Sonarr",
+    entityName: "series",
+    listEntities: (client) => client.listSeries(),
+  });
 }

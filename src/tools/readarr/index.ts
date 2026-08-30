@@ -13,6 +13,7 @@ import {
   READARR_PROVIDER_CONFIG,
   registerProviderConfigTools,
 } from "../provider-config.js";
+import { registerRootAuditTool } from "../root-audit.js";
 
 export function registerReadarrTools(
   server: McpServer,
@@ -166,4 +167,10 @@ export function registerReadarrTools(
   registerReleaseTools(server, readarr);
   registerReadarrManualImportTools(server, readarr);
   registerProviderConfigTools(server, readarr, READARR_PROVIDER_CONFIG);
+  registerRootAuditTool(server, readarr, {
+    prefix: "readarr",
+    appName: "Readarr",
+    entityName: "authors",
+    listEntities: (client) => client.listAuthors(),
+  });
 }
