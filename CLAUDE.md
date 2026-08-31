@@ -105,11 +105,15 @@ The same image supports two transports, selected at start time:
     `Authorization: Bearer <token>` (constant-time comparison). Unset
     means open; the server logs a startup warning either way so the
     posture is never silent.
-  - `MCP_ALLOWED_HOSTS` — comma-separated hostnames. When set, `/mcp`
-    rejects any request whose `Host` (or, if absent, `Origin`) header
-    doesn't match, with 403 — the actual defense against DNS
-    rebinding, since binding loopback means nothing inside a
-    container (see `docker-deployments.md` §8). Unset means open.
+  - `MCP_ALLOWED_HOSTS` — comma-separated bare hostnames (no ports;
+    matching is hostname-only and port-independent, bracketed IPv6
+    like `[::1]` included). When set, `/mcp` rejects any request whose
+    `Host` (or, if also present, `Origin`) header doesn't match, with
+    403 — the actual defense against DNS rebinding, since binding
+    loopback means nothing inside a container (see
+    `docker-deployments.md` §8). Unset falls back to
+    `localhost,127.0.0.1,[::1],host.docker.internal` (safe default,
+    not open) — set it explicitly for any real LAN client.
   - `MCP_SESSION_IDLE_MS` — idle-session eviction threshold in ms
     (default: 30 minutes). A long-lived container otherwise
     accumulates every `McpServer` ever created — clients disconnect

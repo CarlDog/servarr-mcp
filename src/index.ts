@@ -142,7 +142,7 @@ if (port) {
   }
   if (!allowedHosts) {
     console.error(
-      "WARNING: MCP_ALLOWED_HOSTS is not set — the Host/Origin allowlist is disabled (open). Set it to the hostname(s) this server is reached by to block DNS-rebinding attacks from a browser on the host network.",
+      "WARNING: MCP_ALLOWED_HOSTS is not set — the allowlist falls back to localhost/loopback/host.docker.internal only, which rejects a real LAN client. Set it to the hostname(s) this server is reached by to block DNS-rebinding attacks from a browser on the host network.",
     );
   }
 
