@@ -34,7 +34,7 @@ The Streamable HTTP spec (2025-06-18, Session Management §3/§4) makes **404**
 the client's *only* defined signal to re-initialize, so a routine eviction
 read as a dead connection. Fixed in the fleet-canonical
 `src/shared/http-transport.ts` and propagated to all six servers that carry
-the same code (`atlascloud-mcp`, `plex-companion`, `kindroid-mcp` share the
+the same code (`atlascloud-mcp`, `watch-companion`, `kindroid-mcp` share the
 file; `plex-mcp` and `downloader-mcp` hand-roll it). New
 `src/shared/http-transport.test.ts` (8 tests) locks it in — verified to fail
 against the pre-fix code. Also added `MCP_SESSION_IDLE_MS` to
