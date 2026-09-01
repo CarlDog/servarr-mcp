@@ -1,5 +1,14 @@
 # Status
 
+**Last updated:** 2026-08-31 — **startup config gating fixed and covered by
+tests.** Three silent failures in the per-app gate (a half-configured app
+vanishing with no warning, `process.exit(1)` crash-looping HTTP deployments,
+and an INSTRUCTIONS block that overclaimed what the tool list means) plus the
+first tests of gating logic that every deployment depends on. See
+"Done (startup config gating + first test coverage)".
+
+Previous entry, 2026-08-28
+
 **Last updated:** 2026-08-28 — **released v0.1.0**, this repo's first tagged
 release, under the new fleet standard UNI-19. Adds the backfilled
 `CHANGELOG.md` UNI-12 requires, sets `flavor: latest=false` on the publish
@@ -1100,6 +1109,49 @@ automatically and will keep failing until `typescript-eslint` adds
 6.1+/7.x support — at which point revisit; the 6.0.3 stopgap above is
 not itself something to chase further improvements on.
 
+## Done (startup config gating + first test coverage)
+
+The per-app gate in `src/index.ts` failed silently in three ways, none of
+them covered by a test despite being what every deployment depends on.
+
+**A half-configured app vanished with no signal.** `SONARR_URL` set with a
+typo'd `SONARR_API_KEY` meant Sonarr simply disappeared from the tool list —
+nothing on stderr, nothing in `/health` — which is the likeliest real-world
+misconfiguration. It now warns naming both variables, and a healthy sibling
+app no longer masks another's typo.
+
+**`process.exit(1)` on zero configured apps crash-looped** under
+`restart: unless-stopped` (docker-deployments rule #6, the filesystem-mcp
+bug). Defensible for stdio, where there is no client to serve, but in HTTP
+mode it meant `/health` never came up, so an operator with a bad Portainer
+env saw a restart loop and had nothing to query. HTTP mode now stays up and
+reports `enabled: []`, warning loudly; stdio still exits 1. The `MCP_PORT`
+parse moved above the gate, since the exit decision depends on the transport.
+
+**Env values are now trimmed,** so a hand-edited `"  "` no longer registers
+an app whose every call fails at request time. Empty string already worked,
+but by accident of falsiness rather than intent.
+
+**The INSTRUCTIONS block overclaimed** — it told the model the visible tool
+set "tells you which apps the user actually runs". It reflects which apps are
+*configured*; there is no startup connectivity check, so a configured-but-down
+app still registers its full surface and fails at call time. Wording corrected.
+
+**The gating moved to `src/startup.ts` as a pure `planStartup(env, apps)`.**
+This is why the logic had no tests: `index.ts` runs its side effects at import
+and calls `process.exit(1)`, so importing it from a test kills the runner.
+`src/startup.test.ts` is table-driven over the combinations the gap named —
+none, one, both, partial either way, empty string, whitespace-only, and one
+good app alongside another's typo — plus trimming and registration order.
+Filed as `startup.test.ts` rather than the `index.test.ts` the gap asked for,
+for that import-side-effect reason.
+
+Verified against the built server, not only the unit tests, since "does not
+crash-loop" is not a unit-testable property: HTTP with zero apps stays alive
+and answers `/health` with `enabled: []`; stdio with zero apps still exits 1;
+a half-configured Sonarr warns while Radarr still registers. Typecheck, lint
+and 122 unit tests clean.
+
 ## Next
 
 1. **Smoke-test `lidarr_grab_release` / `readarr_grab_release`** —
@@ -1127,6 +1179,77 @@ not itself something to chase further improvements on.
 
 ## Open Decisions
 
+- **UNRESOLVED — should Tdarr tools live here?** Raised 2026-08-28
+  after a live Tdarr diagnosis on the NAS (transcode misconfiguration;
+  see the `tdarr` stack). The read surface would be worth having:
+  `tdarr_status`, `tdarr_list_libraries`, `tdarr_stats`, `tdarr_queue`,
+  `tdarr_job_history`, `tdarr_get_file` would have collapsed an hour of
+  endpoint archaeology into three calls.
+
+  **Two existing decisions in this section already point at this.**
+  Phase 1 scope deferred Bazarr and Mylar3 for "separate API surfaces,
+  separate clients required" — Tdarr is that case exactly. And
+  "Inheritance over composition" says to revisit if "a 6th app diverges
+  sharply." Tdarr is that 6th app: no `X-Api-Key`, no `/api/v3`, no
+  shared pagination or entity shapes, POST-for-everything. None of
+  `ServarrClient` gets reused; it would be a parallel client sharing a
+  repo.
+
+  **Blocking design question: `AppRegistration` assumes URL + key.**
+  The gate is `url && apiKey` and the signature is
+  `register(server, url, apiKey)`. **Tdarr is unauthenticated** — it
+  has no API key at all. So it cannot join the `apps` array as-is;
+  gating on `TDARR_API_KEY` means Tdarr never registers, and passing a
+  dummy key to satisfy the gate reads as deliberate to a future reader
+  and isn't. Widening to an optional `apiKey` plus a per-app
+  `isConfigured()` predicate is a small change, but it is a change to
+  the shared spine every existing app flows through — make it
+  consciously. The config-gating fixes it waited on have landed.
+
+  **What the Tdarr API is actually like** (reverse-engineered against
+  2.86.01, 2026-08-28 — no official docs consulted yet, worth ten
+  minutes before committing):
+    - Good: `GET /api/v2/get-nodes` (live worker state, ETA, fps,
+      compression) is the best endpoint on the box.
+      `POST /api/v2/cruddb` `getAll`/`getById` works reliably across
+      `LibrarySettingsJSONDB`, `SettingsGlobalJSONDB`,
+      `StatisticsJSONDB`, `JobsJSONDB`.
+      `POST /api/v2/client/status-tables` gives queue counts, once you
+      know its `start`/`pageSize`/`filters`/`sorts`/`opts` wrapper.
+    - **Writes silently no-op on wrong params.** `client/kill-worker`,
+      `client/alter-worker-limit`, `client/pause-node`,
+      `cancel-worker-item` all accepted guessed `opts` and returned a
+      success-shaped `{"array":[],"totalCount":0}` while doing nothing.
+      Only re-reading node state revealed it. Worst possible property
+      for a write tool.
+    - The actual cancel endpoint was never found from the API; the
+      working control was a UI button. Capture its payload off the UI's
+      network traffic rather than guessing.
+    - `cruddb` is a raw document-store passthrough with **full-replace**
+      semantics — every edit needs GET → mutate one field → echo all
+      ~50 fields back. Verified working, but a foot-gun unless a tool
+      does the round-trip internally.
+    - Status-table indices are **positional and undocumented**
+      (`table1` = transcode queue, `table2` = not-required,
+      `table3` = error) — inferred by sampling rows and cross-checking
+      `tdarrScore`, not stated anywhere. Pin with a fixture test or a
+      Tdarr upgrade silently changes what every count means.
+    - **No auth whatsoever** — plain HTTP, full write access to the
+      config DB from anywhere on the LAN.
+    - `cruddb getAll` on `JobsJSONDB` returned 24,244 records / 15 MB.
+      Do not expose an unbounded `getAll`; `tdarr_job_history` needs a
+      hard cap and a date filter or it blows the context window on the
+      first call.
+
+  **Leaning:** yes, but **read-only v1** (same call downloader-mcp
+  made, and for a stronger reason here — on Tdarr the writes are the
+  part that lies to you), and **here rather than a standalone
+  `tdarr-mcp`**: six read tools don't justify a twelfth container,
+  another stack/network/CI/hardening pass, on a NAS that just hit
+  Docker address-pool exhaustion from stack sprawl. If it lands here,
+  say plainly in the README that Tdarr is a lodger and the *arr
+  conventions do not apply to it. Revisit standalone if a write
+  surface ever makes it big enough to stand alone.
 - **Per-call timeout override for `searchReleases`.** Resolved to a
   flat 30s timeout everywhere on 2026-08-05 (see "Done — outbound
   timeout, typed errors, bounded retry" above), not the two-tier
