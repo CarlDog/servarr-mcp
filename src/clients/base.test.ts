@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { asText, withProgress } from "./base.js";
+import { asText, ServarrClient, withProgress } from "./base.js";
 
 // asText always returns a single-element content array (hardcoded in its
 // implementation), so the index access is safe despite
@@ -271,6 +271,77 @@ describe("request query serialization", () => {
       ]);
     } finally {
       vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe("outbound request headers", () => {
+  // X-Api-Key is set independently in all five request helpers. Nothing
+  // asserted it, so a sixth helper — or an edit to one of the five — could
+  // ship unauthenticated and only fail against a live *arr instance, which
+  // CI never reaches (the integration suites skip without credentials).
+  class HeaderProbe extends ServarrClient {
+    get = (path: string) => this.request<unknown>(path);
+    post = (path: string, body: unknown) =>
+      this.requestPost<unknown>(path, body);
+    put = (path: string, body: unknown) => this.requestPut<unknown>(path, body);
+    postVoid = (path: string, body: unknown) =>
+      this.requestPostVoid(path, body);
+    del = (path: string) => this.requestDelete(path);
+  }
+
+  const config = {
+    url: "http://sonarr.test:8989",
+    apiKey: "secret-key",
+    apiPath: "/api/v3",
+    appName: "Sonarr",
+  };
+
+  async function capture(drive: (c: HeaderProbe) => Promise<unknown>) {
+    let url: URL | undefined;
+    let init: RequestInit | undefined;
+    const stub = vi.fn(async (u: URL, i: RequestInit) => {
+      url = u;
+      init = i;
+      return new Response("{}", {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", stub);
+    try {
+      await drive(new HeaderProbe(config));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    return { url, headers: (init?.headers ?? {}) as Record<string, string> };
+  }
+
+  const methods: Array<[string, (c: HeaderProbe) => Promise<unknown>]> = [
+    ["request", (c) => c.get("/series")],
+    ["requestPost", (c) => c.post("/series", { title: "x" })],
+    ["requestPut", (c) => c.put("/series/1", { title: "x" })],
+    ["requestPostVoid", (c) => c.postVoid("/history/failed/1", {})],
+    ["requestDelete", (c) => c.del("/queue/1")],
+  ];
+
+  for (const [name, drive] of methods) {
+    test(`${name} sends the API key`, async () => {
+      const { headers } = await capture(drive);
+      expect(headers["X-Api-Key"]).toBe("secret-key");
+    });
+
+    test(`${name} targets the configured host and api path`, async () => {
+      const { url } = await capture(drive);
+      expect(url?.origin).toBe("http://sonarr.test:8989");
+      expect(url?.pathname.startsWith("/api/v3/")).toBe(true);
+    });
+  }
+
+  test("write helpers declare a JSON body", async () => {
+    for (const [, drive] of methods.slice(1, 4)) {
+      const { headers } = await capture(drive);
+      expect(headers["Content-Type"]).toBe("application/json");
     }
   });
 });
