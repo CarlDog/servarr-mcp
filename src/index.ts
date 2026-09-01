@@ -2,24 +2,19 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import express, { type Request, type Response } from "express";
+import { LidarrClient } from "./clients/lidarr.js";
+import { ProwlarrClient } from "./clients/prowlarr.js";
+import { RadarrClient } from "./clients/radarr.js";
+import { ReadarrClient } from "./clients/readarr.js";
+import { SonarrClient } from "./clients/sonarr.js";
 import { mountMcpHttp } from "./shared/http-transport.js";
 import { SERVER_VERSION } from "./shared/version.js";
-import { SonarrClient } from "./clients/sonarr.js";
-import { RadarrClient } from "./clients/radarr.js";
-import { LidarrClient } from "./clients/lidarr.js";
-import { ReadarrClient } from "./clients/readarr.js";
-import { ProwlarrClient } from "./clients/prowlarr.js";
-import { registerSonarrTools } from "./tools/sonarr/index.js";
-import { registerRadarrTools } from "./tools/radarr/index.js";
+import { planStartup, type AppRegistration } from "./startup.js";
 import { registerLidarrTools } from "./tools/lidarr/index.js";
-import { registerReadarrTools } from "./tools/readarr/index.js";
 import { registerProwlarrTools } from "./tools/prowlarr/index.js";
-
-interface AppRegistration {
-  name: string;
-  envPrefix: string;
-  register: (server: McpServer, url: string, apiKey: string) => void;
-}
+import { registerRadarrTools } from "./tools/radarr/index.js";
+import { registerReadarrTools } from "./tools/readarr/index.js";
+import { registerSonarrTools } from "./tools/sonarr/index.js";
 
 const apps: AppRegistration[] = [
   {
@@ -49,25 +44,16 @@ const apps: AppRegistration[] = [
   },
 ];
 
-interface EnabledApp {
-  name: string;
-  url: string;
-  apiKey: string;
-  register: (server: McpServer, url: string, apiKey: string) => void;
+const portStr = process.env.MCP_PORT;
+const port = portStr ? Number.parseInt(portStr, 10) : null;
+if (portStr && (port === null || Number.isNaN(port))) {
+  console.error(`Invalid MCP_PORT: ${portStr}`);
+  process.exit(1);
 }
 
-const enabledApps: EnabledApp[] = [];
-for (const app of apps) {
-  const url = process.env[`${app.envPrefix}_URL`];
-  const apiKey = process.env[`${app.envPrefix}_API_KEY`];
-  if (url && apiKey) {
-    enabledApps.push({
-      name: app.name,
-      url,
-      apiKey,
-      register: app.register,
-    });
-  }
+const { enabled: enabledApps, warnings } = planStartup(process.env, apps);
+for (const warning of warnings) {
+  console.error(`WARNING: ${warning}`);
 }
 
 if (enabledApps.length === 0) {
@@ -75,14 +61,20 @@ if (enabledApps.length === 0) {
     "No Servarr apps configured. Set <APP>_URL and <APP>_API_KEY for at least one of:",
   );
   console.error("  " + apps.map((a) => a.envPrefix).join(", "));
-  process.exit(1);
+  // Exiting under `restart: unless-stopped` turns one bad env var into a
+  // crash loop with nothing to query. In HTTP mode stay up so /health still
+  // answers and reports `enabled: []`; stdio has no client to serve.
+  if (!port) process.exit(1);
+  console.error(
+    "Staying up so /health remains queryable; no tools are registered until the configuration is fixed.",
+  );
 }
 
 const INSTRUCTIONS = `MCP server for the Servarr stack: Sonarr (TV), Radarr (movies), Lidarr (music), Readarr (books), Prowlarr (indexer manager). Each app is optional — only the apps with both URL and API key configured will have their tools registered. Exposes both reads and writes: alongside the browse/search tools, each media app registers add/edit for tracked entities, queue management (remove / force re-grab), interactive release search + grab, history mark-failed, and async search/refresh command triggers. Prowlarr is read-only. Every tool carries MCP annotations (readOnlyHint / destructiveHint / idempotentHint) — filter on those to distinguish reads from writes.
 
 Idioms:
 - Write tools change server state (and grabs queue real downloads). Confirm with the user before invoking a write tool unless intent is unambiguous.
-- Tools are namespaced by app: sonarr_*, radarr_*, lidarr_*, readarr_*, prowlarr_*. The visible tool set tells you which apps the user actually runs.
+- Tools are namespaced by app: sonarr_*, radarr_*, lidarr_*, readarr_*, prowlarr_*. The visible tool set tells you which apps are configured — not which are reachable, since there is no startup connectivity check. A configured-but-down app still registers its tools and fails at call time.
 - Two flavors of "find": *_list_* returns items already tracked by the app (the user's library); *_lookup_* searches the upstream metadata source (TVDB / TMDB / etc.) for items not yet added — useful for "do I already have X?" vs "could I add X?".
 - *_calendar shows upcoming releases for tracked items; only Sonarr and Radarr expose it (Lidarr / Readarr / Prowlarr don't).
 - prowlarr_search hits the indexers directly — heavier than the per-app *_lookup_* tools, use only when the user wants raw release results outside the *arr metadata flow.
@@ -106,15 +98,8 @@ function createServer(): McpServer {
 }
 
 console.error(
-  `servarr-mcp: enabled = ${enabledApps.map((a) => a.name).join(", ")}`,
+  `servarr-mcp: enabled = ${enabledApps.map((a) => a.name).join(", ") || "(none)"}`,
 );
-
-const portStr = process.env.MCP_PORT;
-const port = portStr ? Number.parseInt(portStr, 10) : null;
-if (portStr && (port === null || Number.isNaN(port))) {
-  console.error(`Invalid MCP_PORT: ${portStr}`);
-  process.exit(1);
-}
 
 if (port) {
   // HTTP transport (long-lived server, e.g. for Portainer/Compose deployment).
