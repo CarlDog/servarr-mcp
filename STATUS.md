@@ -1168,14 +1168,22 @@ and 122 unit tests clean.
    (collection-level monitoring, Radarr-specific),
    `lidarr_monitor_albums` / `readarr_monitor_books` (bulk monitor
    toggles), per-season/episode monitor tools for Sonarr.
-4. **Update issue #9** (`[standards-gap] ts-mcp-server v1.0`) — its
-   three P0 judgment findings (MCP-F03 transport hardening, MCP-P04
-   field redaction, MCP-F01/F02/F04 timeout/typed-errors/retry) are
-   now resolved by the security-hardening work above, but the issue's
-   checkboxes haven't been updated to reflect it. The other ~9
-   adoption-debt items (canonical `shared/` layout — partially done —
-   container `HEALTHCHECK`, `.editorconfig`, `naming.test.ts`,
-   version-sync test, etc.) are still genuinely open.
+4. **Work issue #9's nine open standards items.** Refreshed 2026-09-01
+   against standards v2.5 (19 pass / 9 fail). The earlier note here —
+   that the issue's checkboxes lagged the resolved P0 findings — was
+   itself stale: those dropped off when the audit was re-run on
+   2026-08-28. The staleness ran the other way, the issue was missing
+   three newer checks (`MCP-D05`, `MCP-F09`, `UNI-02`).
+
+   Nothing on that list is fixed-but-unticked. Two are worth a decision
+   rather than a fix: **MCP-D04** (`npm install` over `npm ci`) is the
+   documented workaround for the Windows-generated lockfile in Known
+   Gaps, so it stays failing until the lockfile is regenerated on Linux;
+   and **UNI-02** is not a missing check — all three canonical sections
+   are present and the identity guard is the allowlist over author *and*
+   committer. Its drift is the `env bash` shebang, the empty-`STAGED`
+   early return, and the absence of fleet-kit's own section 4, none of
+   which a non-fleet-kit repo can adopt verbatim.
 
 ## Open Decisions
 
