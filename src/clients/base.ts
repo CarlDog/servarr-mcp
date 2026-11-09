@@ -19,6 +19,15 @@ export interface ServarrConfig {
 // instance blocks a tool call for seconds, not forever.
 const TIMEOUT_MS = 30_000;
 
+// Indexer searches fan out upstream even though they use GET. Let one slow
+// search finish instead of starting overlapping searches after each timeout.
+export const INDEXER_SEARCH_TIMEOUT_MS = 120_000;
+
+export interface RequestOptions {
+  retry?: boolean;
+  timeoutMs?: number;
+}
+
 // MCP-F02: bound how many times a GET is retried on a transient upstream
 // failure. Writes (POST/PUT/DELETE) never retry — see requestOnce below.
 const MAX_RETRIES = 3;
@@ -61,9 +70,10 @@ export class ServarrClient {
     path: string,
     url: URL,
     init: RequestInit,
+    timeoutMs = TIMEOUT_MS,
   ): Promise<string> {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await fetch(url, { ...init, signal: controller.signal });
       const text = await res.text();
@@ -85,7 +95,7 @@ export class ServarrClient {
       if (err instanceof ApiError) throw err;
       if (err instanceof Error && err.name === "AbortError") {
         throw new ApiError(
-          `${this.config.appName} request to ${path} timed out after ${TIMEOUT_MS}ms`,
+          `${this.config.appName} request to ${path} timed out after ${timeoutMs}ms`,
           { status: 0 },
         );
       }
@@ -104,6 +114,7 @@ export class ServarrClient {
       string,
       string | number | boolean | readonly (string | number)[]
     > = {},
+    options: RequestOptions = {},
   ): Promise<T> {
     const url = this.buildUrl(path, params);
     const init: RequestInit = {
@@ -112,17 +123,18 @@ export class ServarrClient {
         Accept: "application/json",
       },
     };
+    const maxRetries = options.retry === false ? 0 : MAX_RETRIES;
     let lastErr: unknown;
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const text = await this.requestOnce(path, url, init);
+        const text = await this.requestOnce(path, url, init, options.timeoutMs);
         return JSON.parse(text) as T;
       } catch (err) {
         lastErr = err;
-        // GET is idempotent, so a 429 or transient transport/5xx failure is
-        // safe to retry — POST/PUT/DELETE are not (see below), matching
-        // MCP-F02's "idempotent-only retry".
-        if (attempt < MAX_RETRIES && shouldRetry(err, true)) {
+        // Ordinary reads retry transient failures. Callers that trigger
+        // upstream work (indexer searches) opt out despite using GET.
+        // POST/PUT/DELETE never enter this loop.
+        if (attempt < maxRetries && shouldRetry(err, true)) {
           const wait =
             (err instanceof ApiError && err.retryAfterMs) || backoffMs(attempt);
           log.warn("retrying after upstream failure", {
@@ -349,7 +361,10 @@ export class ServarrClient {
     for (const [k, v] of Object.entries(params)) {
       if (v !== undefined) filtered[k] = v;
     }
-    return this.request("/release", filtered);
+    return this.request("/release", filtered, {
+      retry: false,
+      timeoutMs: INDEXER_SEARCH_TIMEOUT_MS,
+    });
   }
 
   // POST /release. Body is a ReleaseResource — Servarr looks the

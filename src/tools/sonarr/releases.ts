@@ -17,14 +17,14 @@ export function registerReleaseTools(
     {
       title: "Sonarr: Release Search",
       description:
-        "Run a live indexer search for releases of a specific series, season, or episode and return candidate ReleaseResource entries (without grabbing). Hits every enabled indexer in real time — slow and rate-limit-sensitive, so call only when the user wants to pick a release manually. Pass `series_id` for the whole series, `season_number` to scope to a season, or `episode_id` to scope to a single episode. At least one is required. Returned items feed `sonarr_grab_release`.",
+        "Run a live indexer search for releases of a specific season or episode and return candidate ReleaseResource entries (without grabbing). Hits every enabled indexer in real time — slow and rate-limit-sensitive, so call only when the user wants to pick a release manually. Pass both `series_id` and `season_number` for a season (0 for specials), or `episode_id` for a single episode. Series-only searches are not supported; Sonarr may return unrelated RSS results. Returned items feed `sonarr_grab_release`.",
       inputSchema: {
         series_id: z
           .number()
           .int()
           .optional()
           .describe(
-            "Sonarr series id (from sonarr_list_series). Required unless episode_id is set.",
+            "Sonarr series id (from sonarr_list_series). Required with season_number unless episode_id is set.",
           ),
         episode_id: z
           .number()
@@ -38,7 +38,7 @@ export function registerReleaseTools(
           .int()
           .optional()
           .describe(
-            "Season number, used with series_id to scope to a single season.",
+            "Season number (0 for specials), required with series_id unless episode_id is set.",
           ),
       },
       annotations: ANN_READ_EXT,
@@ -49,12 +49,15 @@ export function registerReleaseTools(
           "sonarr_release_search requires series_id or episode_id — an unscoped /release call hits every indexer.",
         );
       }
+      if (episode_id === undefined && season_number === undefined) {
+        throw new Error(
+          "sonarr_release_search requires season_number with series_id unless episode_id is set — series-only calls can return unrelated RSS results.",
+        );
+      }
       const scope =
         episode_id !== undefined
           ? `episode ${episode_id}`
-          : season_number !== undefined
-            ? `series ${series_id} S${season_number}`
-            : `series ${series_id}`;
+          : `series ${series_id} S${season_number}`;
       return withProgress(
         extra,
         (s) => `Sonarr: searching indexers for ${scope}… (${s}s elapsed)`,

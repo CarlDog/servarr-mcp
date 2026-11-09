@@ -1,5 +1,20 @@
 # Status
 
+**Last updated:** 2026-11-09 — **release-search scope and retry policy fixed**
+(issue #44, findings 1–2). Sonarr requires an episode id or a series id plus
+season number, including season 0 for specials; series-only calls now fail
+before contacting Sonarr instead of falling through to unrelated RSS results.
+All four media-app release searches and Prowlarr searches use a single attempt
+with a 120-second deadline, including response-body reads. Ordinary GETs retain
+30-second per-attempt timeouts and at most three retries for 429, transport and
+5xx errors; writes remain single-attempt. No live indexer search or deployment
+was performed. Regression coverage uses handler tests and a loopback HTTP
+transport harness, not a simulated Servarr API. Verified on Node 26.13.0 and
+npm 11.19.0: clean `npm ci`, typecheck, lint, format, build and full suite
+(154 passed, 40 live integration tests skipped without credentials).
+
+Previous entry, 2026-08-31
+
 **Last updated:** 2026-08-31 — **startup config gating fixed and covered by
 tests.** Three silent failures in the per-app gate (a half-configured app
 vanishing with no warning, `process.exit(1)` crash-looping HTTP deployments,
@@ -119,11 +134,10 @@ unauthenticated on the network despite being write-capable (add/edit/
 grab/remove across four media apps). Sensitive `Field` values
 (Prowlarr API keys/passkeys/RSS keys) are now redacted recursively
 before reaching the model, at any nesting depth. Every outbound *arr
-request now has a 30s timeout, throws a typed `ApiError`, and retries
-GET-only on 429 with bounded jittered backoff — resolves the HTTP
-timeout Open Decision parked since 2026-05-06 (see caveat under Done
-below: it shipped as one flat timeout, not the two-tier split
-originally pitched). `radarr_quick_add_movie` / `sonarr_quick_add_series`
+request initially received a 30s per-attempt timeout and typed `ApiError`,
+with GET-only retries for 429, transport and 5xx failures using bounded
+jittered backoff. The release-search exception added on 2026-11-09 is
+documented at the top of this file (one 120s attempt). `radarr_quick_add_movie` / `sonarr_quick_add_series`
 collapse the lookup-then-add two-step into one fuzzy-matched call.
 Also landed: MIT license, a gitleaks CI backstop, Docker publish gated
 on tests passing, and least-privilege CodeQL permissions — partial
@@ -973,16 +987,13 @@ failure is ambiguous. `Retry-After` is honored but capped at
 `MAX_RETRY_AFTER_MS = 60_000` — an upstream asking to wait longer than
 that throws rather than stalling the whole tool queue.
 
-**Resolves the HTTP timeout Open Decision parked since 2026-05-06 —
-with a caveat.** It shipped as a single flat 30s timeout everywhere,
-not the two-tier 30s/120s split the Open Decision had pitched for
-`searchReleases`'s slower live-indexer path. A legitimately slow
-30-60s `release_search` (the case that originally motivated the
-decision — a High School DxD S1 search hung 5+ minutes on a slow
-indexer) can now abort at 30s instead of hanging indefinitely, which
-is strictly better than before, but a per-call timeout override for
-`searchReleases` is still worth revisiting if 30s proves too tight in
-practice.
+**Historical timeout decision, superseded 2026-11-09:** the initial flat
+30s deadline was per attempt, not per tool call. Retried timeouts could issue
+four overlapping live-indexer searches. Issue #44 findings 1–2 prompted the
+single-attempt 120s policy for `/release` and Prowlarr `/search`; ordinary
+reads keep the original bounded retry policy. A client timeout still cannot
+guarantee upstream indexer work stops, so searches must not be retried
+silently.
 
 ## Done (write tools — quick-add)
 
@@ -1258,12 +1269,11 @@ and 122 unit tests clean.
   say plainly in the README that Tdarr is a lodger and the *arr
   conventions do not apply to it. Revisit standalone if a write
   surface ever makes it big enough to stand alone.
-- **Per-call timeout override for `searchReleases`.** Resolved to a
-  flat 30s timeout everywhere on 2026-08-05 (see "Done — outbound
-  timeout, typed errors, bounded retry" above), not the two-tier
-  30s/120s split originally pitched. Revisit only if a legitimately
-  slow 30-60s `release_search` starts hitting the 30s ceiling in
-  practice.
+- **Resolved 2026-11-09 — indexer-search timeout and retry policy.**
+  `/release` and Prowlarr `/search` use one 120s attempt. Ordinary reads
+  retain 30s per-attempt deadlines and bounded retries; writes never retry.
+  The earlier flat-timeout decision is superseded by issue #44 findings 1–2.
+
 
 Decisions made during scaffolding:
 
