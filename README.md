@@ -1,8 +1,10 @@
 # servarr-mcp
 
+<!-- markdownlint-disable MD033 -->
 <!-- fleet-confidence -->
-![code confidence](https://img.shields.io/badge/code_confidence-fair-orange) <sub>· `claude-opus-4-8[1m]` · 2026-07-07 · [details](https://github.com/CarlDog/servarr-mcp/issues/2)</sub>
+![code confidence](https://img.shields.io/badge/code_confidence-fair-orange) <sub>· claude-fable-5-1 · 2026-11-08 · [details](../../issues/44)</sub>
 <!-- /fleet-confidence -->
+<!-- markdownlint-enable MD033 -->
 
 
 An [MCP](https://modelcontextprotocol.io) server for the
