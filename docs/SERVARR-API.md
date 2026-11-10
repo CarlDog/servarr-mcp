@@ -50,6 +50,21 @@ the latest `develop` branch:
 4. The `.gitattributes` rule pins these files to LF on checkout so
    refreshes don't show CRLF/LF noise.
 
+## Live indexer-search policy
+
+`sonarr_release_search` requires either `episode_id` or both `series_id` and
+`season_number` (0 is valid for specials). A series id alone is not a supported
+manual search: the pinned Sonarr version falls back to RSS results, while newer
+versions may reject it. No whole-series fan-out is performed by this tool.
+
+The four media apps' `/release` calls and Prowlarr `/search` use one request with
+a 120-second timeout, covering headers and body. They never retry automatically,
+including on 429, 5xx, network failure or timeout, because each attempt can start
+another indexer fan-out that continues upstream after the client disconnects.
+MCP hosts can impose a shorter deadline; progress notifications do not override
+host limits. Ordinary GETs retain a 30-second per-attempt timeout with at most
+three retries for transient failures. Writes never retry.
+
 ## Authentication
 
 All five apps use the same scheme (verified — identical

@@ -1,4 +1,4 @@
-import { ServarrClient } from "./base.js";
+import { INDEXER_SEARCH_TIMEOUT_MS, ServarrClient } from "./base.js";
 
 export class ProwlarrClient extends ServarrClient {
   constructor(url: string, apiKey: string) {
@@ -29,6 +29,9 @@ export class ProwlarrClient extends ServarrClient {
     if (categories && categories.length > 0) {
       params.categories = categories;
     }
-    return this.request("/search", params);
+    return this.request("/search", params, {
+      retry: false,
+      timeoutMs: INDEXER_SEARCH_TIMEOUT_MS,
+    });
   }
 }

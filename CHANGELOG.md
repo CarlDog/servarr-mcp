@@ -13,6 +13,16 @@ after the fact.
 
 ## [Unreleased]
 
+### Fixed
+
+- `sonarr_release_search` now requires `episode_id` or both `series_id` and
+  `season_number` (including 0 for specials). Series-only searches are rejected
+  before contacting Sonarr, avoiding unrelated RSS results.
+- Media-app release searches and Prowlarr searches now make one attempt with
+  a 120-second deadline instead of retrying slow searches up to four times.
+  Ordinary reads retain their 30-second per-attempt timeout and bounded retry
+  policy; POST, PUT and DELETE remain single-attempt.
+
 ### Changed
 
 - **`MCP_ALLOWED_HOSTS` matching now handles bracketed IPv6 correctly.**

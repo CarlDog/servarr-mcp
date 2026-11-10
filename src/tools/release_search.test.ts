@@ -3,7 +3,7 @@
 // has a single required movie_id at the schema layer, so no guard
 // to test there.
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { LidarrClient } from "../clients/lidarr.js";
 import { ReadarrClient } from "../clients/readarr.js";
 import { SonarrClient } from "../clients/sonarr.js";
@@ -23,6 +23,53 @@ describe("release_search unscoped guard", () => {
       /requires series_id or episode_id/,
     );
   });
+
+  test.each([{}, { series_id: 12 }, { season_number: 0 }])(
+    "sonarr_release_search refuses incomplete scope %j before contacting Sonarr",
+    async (scope) => {
+      const sonarr = new SonarrClient("http://x", "k");
+      const search = vi.spyOn(sonarr, "searchReleases").mockResolvedValue([]);
+      const server = new CaptureServer();
+      registerSonarrTools(server as never, sonarr);
+
+      await expect(
+        server.byName("sonarr_release_search").callback(scope, fakeExtra()),
+      ).rejects.toThrow(/requires/);
+      expect(search).not.toHaveBeenCalled();
+    },
+  );
+
+  test.each([
+    [
+      { series_id: 12, season_number: 0 },
+      { seriesId: 12, seasonNumber: 0 },
+    ],
+    [
+      { series_id: 12, season_number: 2 },
+      { seriesId: 12, seasonNumber: 2 },
+    ],
+    [{ episode_id: 123 }, { episodeId: 123 }],
+    [
+      { series_id: 12, episode_id: 123 },
+      { seriesId: 12, episodeId: 123 },
+    ],
+  ])(
+    "sonarr_release_search accepts scoped input %j",
+    async (scope, expected) => {
+      const sonarr = new SonarrClient("http://x", "k");
+      const search = vi.spyOn(sonarr, "searchReleases").mockResolvedValue([]);
+      const server = new CaptureServer();
+      registerSonarrTools(server as never, sonarr);
+
+      await server.byName("sonarr_release_search").callback(scope, fakeExtra());
+      expect(search).toHaveBeenCalledExactlyOnceWith({
+        seriesId: undefined,
+        seasonNumber: undefined,
+        episodeId: undefined,
+        ...expected,
+      });
+    },
+  );
 
   test("lidarr_release_search refuses calls with no artist_id and no album_id", async () => {
     const lidarr = new LidarrClient("http://x", "k");
